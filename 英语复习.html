@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英语全能刷题 (瓮云升吃鸡很菜版)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer onerror="window.pdfLoadError=true"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" defer></script>
+    
+    <style>
+        :root {
+            --primary: #2c3e50; 
+            --blue-mode: #3498db;   /* 长难句 */
+            --gold-mode: #f39c12;   /* 金句 */
+            --green-mode: #27ae60;  /* 选择题 */
+            --bg: #f0f3f6; 
+            --card-bg: #ffffff;
+        }
+
+        body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; margin: 0; padding: 20px; background: var(--bg); color: #333; overflow-x: hidden; }
+        .container { max-width: 1000px; margin: 0 auto; display: none; padding-bottom: 60px; }
+
+        /* --- 动画引擎 --- */
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .anim-item { opacity: 0; animation: fadeInUp 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
+
+        /* 顶部导航 */
+        .header { text-align: center; margin-bottom: 30px; animation: fadeInUp 0.6s ease; }
+        .nav-tabs { display: flex; justify-content: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+        
+        .nav-btn {
+            padding: 10px 22px; border: none; border-radius: 50px; cursor: pointer;
+            font-size: 15px; font-weight: bold; transition: all 0.3s;
+            background: #e0e0e0; color: #7f8c8d; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .nav-btn:hover { transform: translateY(-2px); }
+        .nav-btn.active { color: white; transform: scale(1.05); box-shadow: 0 8px 15px rgba(0,0,0,0.15); }
+        
+        .nav-btn[data-theme="blue"].active { background: var(--blue-mode); }
+        .nav-btn[data-theme="gold"].active { background: var(--gold-mode); }
+        .nav-btn[data-theme="green"].active { background: var(--green-mode); }
+        .nav-btn[data-theme="red"].active { background: #c0392b; }
+
+        /* 模块容器 */
+        .section { display: none; }
+        .section.active { display: block; }
+
+        /* 控件栏 */
+        .control-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; animation: fadeInUp 0.4s ease; flex-wrap: wrap; gap: 10px; }
+        .btn-refresh { padding: 10px 25px; border-radius: 25px; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); font-size: 14px; display: flex; align-items: center; gap: 5px; }
+        .btn-refresh:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.15); }
+        
+        /* ================= 卡片样式 ================= */
+        /* 长难句 */
+        .trans-card {
+            background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 20px;
+            border-left: 5px solid var(--blue-mode); box-shadow: 0 3px 10px rgba(52, 152, 219, 0.1);
+            transition: 0.3s; position: relative;
+        }
+        .cn-text { font-size: 18px; font-weight: 600; margin-bottom: 15px; color: #2c3e50; line-height: 1.6; }
+        .en-box { background: #f0f7fb; padding: 20px; border-radius: 8px; margin-top: 15px; display: none; border: 1px solid #d6eaf8; }
+        .en-text { font-size: 16px; color: #2980b9; font-weight: 500; font-family: 'Segoe UI', sans-serif; line-height: 1.5; }
+        
+        .mp-badge { 
+            position: absolute; top: 15px; right: 15px; 
+            background: #ecf0f1; color: #7f8c8d; font-size: 12px; padding: 3px 8px; border-radius: 4px; font-weight: bold;
+        }
+
+        /* 金句卡片 (3D) */
+        .flash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; perspective: 1000px; }
+        .flashcard-container { background: transparent; height: 160px; width: 100%; perspective: 1000px; cursor: pointer; }
+        .flashcard-inner {
+            position: relative; width: 100%; height: 100%; text-align: center;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d; box-shadow: 0 4px 10px rgba(243, 156, 18, 0.15); border-radius: 15px;
+        }
+        .flashcard-container.flipped .flashcard-inner { transform: rotateY(180deg); }
+        .flash-front, .flash-back {
+            position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            border-radius: 15px; padding: 15px; box-sizing: border-box; border: 2px solid #f9e79f; background: white;
+        }
+        .flash-front { color: #555; font-weight: bold; font-size: 16px; }
+        .flash-back { background: #fef9e7; transform: rotateY(180deg); border-color: #f39c12; color: #d35400; justify-content: space-between; }
+        .flash-en-text { font-size: 15px; font-weight: bold; margin-top: 5px; line-height: 1.4; }
+        .flash-btns { display: flex; gap: 8px; width: 100%; justify-content: center; margin-top: 5px; z-index: 10; pointer-events: auto; }
+
+        /* 选择题卡片 */
+        .quiz-card {
+            background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 20px;
+            border-top: 4px solid var(--green-mode); box-shadow: 0 4px 15px rgba(39, 174, 96, 0.08);
+        }
+        .q-text { font-size: 18px; margin-bottom: 20px; font-weight: 600; }
+        .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .opt-btn { 
+            padding: 15px; border: 2px solid #f0f0f0; border-radius: 10px; cursor: pointer; 
+            background: #fff; transition: 0.2s; font-size: 15px;
+        }
+        .opt-btn:hover { border-color: var(--green-mode); background: #f9fff9; }
+        .opt-btn.correct { background: #d4edda; border-color: #28a745; color: #155724; font-weight: bold; }
+        .opt-btn.wrong { background: #f8d7da; border-color: #dc3545; color: #721c24; opacity: 0.7; }
+        .quiz-feedback { margin-top: 20px; padding: 15px; background: #e8f5e9; border-left: 4px solid var(--green-mode); border-radius: 4px; color: #2e7d32; display: none; animation: fadeInUp 0.3s ease; }
+
+        /* 通用按钮 */
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; font-size: 13px; }
+        .btn:hover { transform: scale(1.05); }
+        .btn:active { transform: scale(0.95); }
+        .btn-reveal { background: #95a5a6; width: 100%; padding: 12px; font-size: 14px; }
+        .btn-yes { background: #27ae60; box-shadow: 0 2px 5px rgba(39, 174, 96, 0.3); }
+        .btn-no { background: #e74c3c; box-shadow: 0 2px 5px rgba(231, 76, 60, 0.3); }
+        
+        /* 交互提示 (Toast) */
+        #toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 9999; }
+        .toast {
+            background: rgba(0,0,0,0.8); color: white; padding: 12px 25px; border-radius: 30px;
+            margin-top: 10px; font-size: 14px; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; gap: 8px;
+        }
+        .toast.success { background: #27ae60; }
+        .toast.error { background: #e74c3c; }
+
+        /* 错题本 */
+        #mistake-list { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .mistake-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .mistake-item:last-child { border-bottom: none; }
+        
+        #loading-screen { text-align: center; padding-top: 100px; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<div id="loading-screen">
+    <h2>🚀 正在初始化全量题库...</h2>
+    <p>如果无响应，请点击 <button onclick="hardReset()" style="padding:5px 10px;">🛠️ 修复数据</button></p>
+</div>
+
+<div class="container" id="app-content">
+    <div class="header">
+        <h2 style="margin:0; color:#2c3e50;">英语全能刷题 <span style="font-size:14px; font-weight:normal; color:#aaa;">瓮云升吃鸡很菜版</span></h2>
+        <div class="nav-tabs">
+            <button class="nav-btn active" data-theme="blue" onclick="switchTab('bigTrans', this)">📘 长难句特训</button>
+            <button class="nav-btn" data-theme="gold" onclick="switchTab('goldTrans', this)">🌟 金句速记</button>
+            <button class="nav-btn" data-theme="green" onclick="switchTab('quiz', this)">📝 语法选择</button>
+            <button class="nav-btn" data-theme="red" onclick="switchTab('mistakes', this)">📕 错题档案</button>
+        </div>
+    </div>
+
+    <div id="bigTrans" class="section active">
+        <div class="control-bar">
+            <span style="color:var(--blue-mode); font-weight:bold;">句对句精读 (5句/组)</span>
+            <button class="btn btn-refresh" style="background:var(--blue-mode)" onclick="renderBigTrans()">🔄 换下一组 (5句)</button>
+        </div>
+        <div id="bigTrans-list"></div>
+    </div>
+
+    <div id="goldTrans" class="section">
+        <div class="control-bar">
+            <span style="color:var(--gold-mode); font-weight:bold;">快速刷词 (15词/组)</span>
+            <button class="btn btn-refresh" style="background:var(--gold-mode)" onclick="renderGoldTrans()">🔄 换下一组 (15词)</button>
+        </div>
+        <div id="goldTrans-list" class="flash-grid"></div>
+    </div>
+
+    <div id="quiz" class="section">
+        <div class="control-bar">
+            <span style="color:var(--green-mode); font-weight:bold;">第一题单选/填空 (10题/组)</span>
+            <button class="btn btn-refresh" style="background:var(--green-mode)" onclick="renderQuiz()">🔄 换下一组 (10题)</button>
+        </div>
+        <div id="quiz-list"></div>
+    </div>
+
+    <div id="mistakes" class="section">
+        <div class="control-bar">
+            <strong>🔥 重点关注 (记忆点数 > 12)</strong>
+            <div>
+                <button class="btn" style="background:#34495e" onclick="exportPDF()">📄 导出PDF</button>
+                <button class="btn btn-no" onclick="hardReset()">🗑️ 清空数据</button>
+            </div>
+        </div>
+        <div id="mistake-list"></div>
+    </div>
+</div>
+
+<script>
+    // ================= 全量数据库 (Full Database) =================
+    
+    // 1. 长难句 (Big Trans) - 修正了AI部分
+    const bigTransDB = [
+        // Global Warming
+        { id: "bt_1", cn: "中国是一个幅员辽阔、海岸线长的国家，受全球变暖的不利影响很大。", en: "China is a vast country with a long coastline and is heavily affected by the adverse effects of global warming." },
+        { id: "bt_2", cn: "中国正采取积极措施以应对全球变暖。", en: "China is taking active measures to combat global warming." },
+        { id: "bt_3", cn: "一、实施可持续发展战略，加强环境保护。", en: "Firstly, it will implement the strategy of sustainable development and strengthen environmental protection." },
+        { id: "bt_4", cn: "二、推进节能减排，控制碳排放量。", en: "Secondly, it will promote energy saving and emission reduction, and control the amount of carbon emissions." },
+        { id: "bt_5", cn: "三、改善能源结构，开发新能源和可再生能源。", en: "Thirdly, it will improve the energy structure and develop new and renewable energy." },
+        { id: "bt_6", cn: "四、扩大森林面积。", en: "Lastly, it will expand forest areas." },
+        { id: "bt_7", cn: "森林对于吸收二氧化碳具有重要意义。", en: "Forests are significant for absorbing carbon dioxide." },
+        { id: "bt_8", cn: "全球森林面积总体上在减少，而中国的森林覆盖率逐年有所提高。", en: "The global forest area overall is decreasing, while China's forest coverage rate is increasing year by year." },
+        { id: "bt_9", cn: "全球变暖对于生活在地球上的每一个认都会有影响。", en: "Global warming will affect everyone who lives on the Earth." },
+        { id: "bt_10", cn: "中国作为一个负责任的大国，现在和将来都会坚持履行自己应负的责任。", en: "As a responsible major country, China will continue to fulfill its responsibilities at present and in the future." },
+        // AI - Updated with full list
+        { id: "bt_11", cn: "中国人工智能起步较晚。", en: "China is a late starter in artificial intelligence." },
+        { id: "bt_12", cn: "不过，改革开放以来，尤其是近十年，中国的人工智能发展迅速。", en: "However, since the reform and opening up, especially in the recent decade, China's AI has been developing rapidly." },
+        { id: "bt_13", cn: "人工智能的发展已成为一项国家战略。", en: "The development of AI has become a national strategy." },
+        { id: "bt_14", cn: "有数十万计的科学技术人员和大学师生从事人工智能的研究、学习、开发与应用。", en: "There are hundreds of thousands of scientific and technical personnel, university teachers and students engaged in the research, learning, development and application of AI." },
+        { id: "bt_15", cn: "互联网和大数据推动人工智能进入了新的发展阶段。", en: "The Internet and big data have pushed AI into a new stage of development." },
+        { id: "bt_16", cn: "中国在人工智能方面取得了突破。", en: "China has made breakthroughs in AI." },
+        { id: "bt_17", cn: "已在自然语言处理、语音识别、图像识别、机器学习、虚拟现实、智能驾驶和智能机器人等领域取得了一大批具有国际先进水平的应用成果。", en: "It has achieved a large number of internationally advanced application results in fields like natural language processing, speech recognition, image recognition, machine learning, virtual reality, intelligent driving and intelligent robots." },
+        // Drone
+        { id: "bt_18", cn: "目前，无人机送货在许多国家受到重视。", en: "At present, drone delivery is valued in many countries." },
+        { id: "bt_19", cn: "美国已经批准了无人机用于商用送货。", en: "The United States has approved drones for commercial delivery." },
+        { id: "bt_20", cn: "中国的阿里巴巴、京东和顺丰也已开始尝试无人机送货。", en: "China's Alibaba, JD.com and SF Express have also begun experimenting with drone delivery." },
+        { id: "bt_21", cn: "不过，想要这一服务成为可能，必须要解决两大难题。", en: "But to make the service possible, two big problems must be solved." },
+        { id: "bt_22", cn: "一是噪声问题。无人机飞行过程中会产生噪声。", en: "One is noise. Drones make noise during flight." },
+        { id: "bt_23", cn: "货物越重，就需要更大的无人机，更大的无人机就会产生更大的噪声污染。", en: "The heavier the cargo, the greater the need for larger drones, and larger drones will generate more noise pollution." },
+        { id: "bt_24", cn: "二是隐私问题。", en: "The other is privacy." },
+        { id: "bt_25", cn: "无人机在飞行过程中，可能收集到居民的个人信息。", en: "During the flight, drones may collect the residents' personal information." },
+        { id: "bt_26", cn: "这些信息可能被坏人利用，从而引发各种犯罪活动。", en: "These information may be used by evil people and trigger various criminal activities." },
+        { id: "bt_27", cn: "这两大问题是所有计划使用无人机送货服务的公司亟待解决的问题。", en: "These are two major problems that have to be addressed by all companies planning to use drone delivery services." },
+        // Social Media
+        { id: "bt_28", cn: "据一项调查，中国网民日均使用社交媒体的时间超过三个小时。", en: "According to a survey, Chinese netizens use social media for more than three hours per day." },
+        { id: "bt_29", cn: "社交媒体是增加了人与人之间的联系，还是拉大了人与人之间的距离？", en: "Have the social media increased the contact between people or widened their distance?" },
+        { id: "bt_30", cn: "这似乎是一个很难回答的问题。", en: "That seems to be a tough question to answer." },
+        { id: "bt_31", cn: "这些平台确实缩短了人们在时间与空间上的距离，但心理的距离似乎在拉大。", en: "These platforms do shorten the distance between people in time and space, but their psychological distance seems to be widening." },
+        { id: "bt_32", cn: "有时，人们宁可低头给社交媒体里远方的陌生人发十条评论，也不愿意抬头与面前的朋友有眼神交流。", en: "Sometimes people would rather look down and send 10 comments to distant strangers on social media than look up and make eye contact with friends in front of them." },
+        { id: "bt_33", cn: "以前，人们把朋友分为两种：深交和点头之交。", en: "In the past, people divided friends into two types: close friends and nodding friends." },
+        { id: "bt_34", cn: "现在似乎又多了一种，称为“点赞之交”。", en: "Now there seems to be another kind of friends called 'thumbs-up friends.'" },
+        { id: "bt_35", cn: "但是，在社交媒体上泛滥的“点赞”里，能有多少真挚的友情呢？", en: "But how much genuine friendship can there be in the 'likes' that flood the social media?" }
+    ];
+
+    // 2. 金句库 (Gold Trans) - 补全至38条
+    const goldTransDB = [
+        { id: "gt_1", cn: "铭记历史", en: "Remember history" }, { id: "gt_2", cn: "缅怀先烈", en: "Honor the fallen" },
+        { id: "gt_3", cn: "珍爱和平", en: "Cherish peace" }, { id: "gt_4", cn: "开创未来", en: "Open up the future" },
+        { id: "gt_5", cn: "抗日民族统一战线", en: "National united front against Japanese aggression" },
+        { id: "gt_6", cn: "人类命运休戚与共", en: "Humanity shares a common destiny" },
+        { id: "gt_7", cn: "守望相助", en: "Support one another" }, { id: "gt_8", cn: "维护共同安全", en: "Safeguard common security" },
+        { id: "gt_9", cn: "消弭战争根源", en: "Eliminate the root cause of war" }, { id: "gt_10", cn: "对话还是对抗", en: "Dialogue or confrontation" },
+        { id: "gt_11", cn: "共赢还是零和", en: "Win-win outcomes or zero-sum games" }, { id: "gt_12", cn: "神圣职责", en: "Sacred duties" },
+        { id: "gt_13", cn: "世界一流军队", en: "World-class forces" }, { id: "gt_14", cn: "国家主权", en: "National sovereignty" },
+        { id: "gt_15", cn: "领土完整", en: "Territorial integrity" }, { id: "gt_16", cn: "中华民族伟大复兴", en: "The great rejuvenation of the Chinese nation" },
+        { id: "gt_17", cn: "血肉之躯筑长城", en: "Building a great wall with their flesh and blood" },
+        { id: "gt_18", cn: "反抗外敌入侵", en: "Against foreign aggression" }, { id: "gt_19", cn: "拯救人类文明", en: "The salvation of human civilization" },
+        { id: "gt_20", cn: "构建人类命运共同体", en: "Build a community with a shared future for humanity" },
+        { id: "gt_21", cn: "踔厉奋发、勇毅前行", en: "Forge ahead with determination and courage" },
+        { id: "gt_22", cn: "中国式现代化", en: "Chinese modernization" }, { id: "gt_23", cn: "强国建设", en: "Build a strong country" },
+        { id: "gt_24", cn: "民族复兴", en: "National rejuvenation" },
+        { id: "gt_25", cn: "战略支撑", en: "Strategic support" }, { id: "gt_26", cn: "巨大的民族牺牲", en: "Immense national sacrifice" },
+        { id: "gt_27", cn: "保卫世界和平", en: "The defense of world peace" }, { id: "gt_28", cn: "和平发展道路", en: "The path of peaceful development" },
+        { id: "gt_29", cn: "中国人民解放军", en: "The Chinese People's Liberation Army (PLA)" }, { id: "gt_30", cn: "世界和平与发展", en: "World peace and development" },
+        { id: "gt_31", cn: "新时代新征程", en: "New journey in the new era" }, { id: "gt_32", cn: "中国共产党", en: "The Communist Party of China (CPC)" },
+        { id: "gt_33", cn: "中国特色社会主义道路", en: "The path of socialism with Chinese characteristics" }, { id: "gt_34", cn: "伟大抗战精神", en: "The great spirit of the War of Resistance" },
+        { id: "gt_35", cn: "东方主战场", en: "The main eastern theater" }, { id: "gt_36", cn: "中国人民抗日战争", en: "Chinese People's War of Resistance against Japanese Aggression" },
+        { id: "gt_37", cn: "世界反法西斯战争", en: "World Anti-Fascist War" }, { id: "gt_38", cn: "阅兵重要讲话金句", en: "Key quotes from the parade speech" }
+    ];
+
+    // 3. 全量题库 (Quiz) - 提取自第一题文档
+    const quizDB = [
+        // Page 16
+        { id: "p16_1", q: "A large quantity of real cases suggest that the average speed of the vehicles ______ closely with the severity of the accident caused.", a: "correlates", options: ["refund", "correlates", "inherit", "proclaim"], expl: "correlate with: 与...相关" },
+        { id: "p16_2", q: "In schools, teachers and pupils alike often ______ that if a concept has been easy to learn, then the lesson has been successful.", a: "assume", options: ["assume", "range", "rig", "inherit"], expl: "assume: 假设，认为" },
+        { id: "p16_3", q: "The company's new president will have to ______ some complicated legal problems from his predecessor.", a: "inherit", options: ["inherit", "innovate", "prestige", "range"], expl: "inherit: 继承" },
+        { id: "p16_4", q: "Every year, 1.25 million people die in traffic accidents around the world, which is ______ to the entire population of China's Lijiang City.", a: "equivalent", options: ["revolutionize", "equivalent", "assume", "rig"], expl: "equivalent to: 相当于" },
+        { id: "p16_5", q: "What is fundamental to a company's survival is to ______ and always go a few steps ahead in the industry.", a: "innovate", options: ["innovate", "refund", "whereas", "proclaim"], expl: "innovate: 创新" },
+        { id: "p16_6", q: "All the member countries at the conference have signed a treaty to ______ their loyalty to the alliance.", a: "proclaim", options: ["proclaim", "correlate", "prestige", "assume"], expl: "proclaim: 宣示，宣告" },
+        { id: "p16_7", q: "Huawei, a Chinese technology company... enjoys high ______ both locally and internationally.", a: "prestige", options: ["range", "prestige", "inherit", "revolutionize"], expl: "prestige: 声望" },
+        { id: "p16_8", q: "The railway company claimed that they would ______ 20 percent of a fare if their train is more than an hour late.", a: "refund", options: ["refund", "whereas", "equivalent", "correlate"], expl: "refund: 退款" },
+        { id: "p16_9", q: "Lu Xun produced many long-lasting short stories, the themes of which cover an extensive ______ and reflect a multitude of aspects of social life.", a: "range", options: ["rig", "range", "innovate", "inherit"], expl: "range: 范围" },
+        { id: "p16_10", q: "Agricultural technologies have ______ farm production, resulting in a dramatic increase in grain output.", a: "revolutionized", options: ["revolutionized", "proclaim", "prestige", "assume"], expl: "revolutionize: 使...发生革命性变化" },
+        { id: "p16_11", q: "He was sentenced to ten years' imprisonment for ______ the stock market and making huge profits illegally.", a: "rigging", options: ["rigging", "refund", "range", "whereas"], expl: "rig: 操纵（市场）" },
+        { id: "p16_12", q: "The city spent over $1 billion on its museums and stadiums, ______ it failed to look after its schools.", a: "whereas", options: ["whereas", "equivalent", "correlate", "innovate"], expl: "whereas: 然而" },
+        // Page 17
+        { id: "p17_1", q: "If someone tries to persuade you to invest in a project that is least likely to pay off, you might as well ______ it.", a: "close your ears to", options: ["close your ears to", "point out", "fill out", "result in"], expl: "close ears to: 充耳不闻" },
+        { id: "p17_2", q: "All doctoral students are expected to hand in their thesis abstracts before Friday, so don't ______ details for the time being.", a: "sweat over", options: ["sweat over", "tend to", "in the first place", "behind the times"], expl: "sweat over: 焦虑，辛苦处理" },
+        { id: "p17_3", q: "It will take some time for the applicants to ______ the forms for overseas study programs.", a: "fill out", options: ["fill out", "point out", "close one's ears to", "result in"], expl: "fill out: 填写" },
+        { id: "p17_4", q: "People in rural or underserved urban areas tend to be much ______ when it comes to the latest computing technology.", a: "behind the times", options: ["behind the times", "in the first place", "sweat over", "tend to"], expl: "behind the times: 落后于时代" },
+        { id: "p17_5", q: "He couldn't find the application form; probably he had not even been given one ______.", a: "in the first place", options: ["in the first place", "result in", "fill out", "point out"], expl: "in the first place: 起初" },
+        { id: "p17_6", q: "The fall in the value of the Japanese yen might ______ a very slight increase in interest rates.", a: "result in", options: ["result in", "tend to", "close one's ears to", "sweat over"], expl: "result in: 导致" },
+        // Page 52 (MCQ)
+        { id: "p52_1", q: "Officials claim that the chemical leak accident **poses** no real danger for surrounding residents.", a: "presents", options: ["presents", "alarms", "boosts"], expl: "pose danger = present danger" },
+        { id: "p52_2", q: "These arguments were **valid** a hundred years ago and they still hold true today.", a: "justifiable", options: ["valuable", "flawless", "justifiable"], expl: "valid = justifiable" },
+        { id: "p52_3", q: "There are rules to prohibit emission of poisonous waste, yet some factories **disregard** them for the sake of costs.", a: "ignore", options: ["innovate", "correlate", "ignore"], expl: "disregard = ignore" },
+        { id: "p52_4", q: "His **interpretation** of the theory was not accurate or objective.", a: "explanation", options: ["explanation", "revolution", "completion"], expl: "interpretation = explanation" },
+        { id: "p52_5", q: "It is well **documented** that women generally have a longer life span than men.", a: "proven with facts", options: ["proven with facts", "imposed with orders", "announced with authority"], expl: "documented = proven with facts" },
+        { id: "p52_6", q: "The attorney's arguments are valid since he has collected enough **proof** concerning the case.", a: "evidence", options: ["assurance", "promotion", "evidence"], expl: "proof = evidence" },
+        { id: "p52_7", q: "We hope that our research will have an **impact** on the environment, especially the air quality in cities.", a: "influence", options: ["initiative", "influence", "analysis"], expl: "impact = influence" },
+        { id: "p52_8", q: "The system is so sensitive that it can **detect** changes in temperature as small as 0.003 degrees.", a: "identify", options: ["identify", "inherit", "convert"], expl: "detect = identify" },
+        { id: "p52_9", q: "The president said curbing the addiction of alcohol would save money and **prolong** lives.", a: "extend", options: ["persist", "delay", "extend"], expl: "prolong = extend" },
+        { id: "p52_10", q: "We still have no **conclusive** proof that climate change is caused solely by human activity.", a: "decisive", options: ["decisive", "dominant", "apparent"], expl: "conclusive = decisive" },
+        { id: "p52_11", q: "The research team has been **tracking** atmospheric temperatures in the region for two decades.", a: "following", options: ["generating", "following", "spinning"], expl: "tracking = following" },
+        { id: "p52_12", q: "Concentration is **defined** as the process of centering one's attention over a period of time.", a: "explained", options: ["outlined", "distinguished", "explained"], expl: "defined = explained" },
+        { id: "p52_13", q: "There is still no general **consensus** on whether global warming is real or not.", a: "agreement", options: ["agreement", "conclusion", "definition"], expl: "consensus = agreement" },
+        { id: "p52_14", q: "Environmentalists **advocate** that all vehicles keep to exhaust emission standard.", a: "support", options: ["support", "determine", "indicate"], expl: "advocate = support" },
+        { id: "p52_15", q: "It is important to **maintain** a constant temperature inside the greenhouse.", a: "keep", options: ["keep", "contain", "restrict"], expl: "maintain = keep" },
+        // Page 53
+        { id: "p53_1", q: "This is partially attributed ______ the melting of ice caps.", a: "to", options: ["to", "with", "from", "on"], expl: "attribute ... to" },
+        { id: "p53_2", q: "Sea levels have doubled compared ______ the 20th century trend.", a: "with", options: ["with", "to", "in", "at"], expl: "compared with" },
+        { id: "p53_3", q: "The rise ... has resulted ______ greenhouse gases.", a: "from", options: ["from", "in", "to", "on"], expl: "result from" },
+        { id: "p53_4", q: "The glaciers are decreasing in size due ______ reduction in gases.", a: "to", options: ["to", "from", "with", "by"], expl: "due to" },
+        { id: "p53_5", q: "... those in favor ______ proving its existence ...", a: "of", options: ["of", "in", "on", "to"], expl: "in favor of" },
+        { id: "p53_6", q: "These scientists hold ______ a strict definition ...", a: "to", options: ["to", "on", "with", "at"], expl: "hold to" },
+        { id: "p53_7", q: "But, ______ the contrary Arctic ice is up ...", a: "on", options: ["on", "in", "to", "of"], expl: "on the contrary" },
+        { id: "p53_8", q: "The ... problem lies ______ the two groups using different definitions.", a: "in", options: ["in", "on", "at", "to"], expl: "lie in" },
+        { id: "p53_9", q: "... it is more reflective ______ the real issue.", a: "of", options: ["of", "to", "in", "with"], expl: "reflective of" },
+        { id: "p53_10", q: "Contrary ______ public belief ...", a: "to", options: ["to", "with", "from", "on"], expl: "contrary to" },
+        // Page 87 (Address)
+        { id: "p87_1", q: "This book discusses these concerns and useful approaches to **address** them.", a: "deal with a problem", options: ["make a speech", "direct words to someone", "deal with a problem"], expl: "address: 处理" },
+        { id: "p87_2", q: "You will have to **address** your comments to our Head Office.", a: "direct words to someone", options: ["make a speech", "direct words to someone", "deal with a problem"], expl: "address: 致函" },
+        { id: "p87_3", q: "The minister **addressed** a group of senior citizens concerning healthcare reform.", a: "make a speech", options: ["make a speech", "direct words to someone", "deal with a problem"], expl: "address: 演讲" },
+        // Page 89 (Phrases)
+        { id: "p89_1", q: "It is an army man's duty to ______ orders strictly during a military operation.", a: "act on", options: ["act on", "be rid of", "aside from", "brush aside"], expl: "act on: 奉行" },
+        { id: "p89_2", q: "If you have ______ all the exercises in this book, you are ready for the advanced course.", a: "followed through", options: ["followed through", "build up", "cope with", "reach out"], expl: "follow through: 完成" },
+        { id: "p89_3", q: "The government programs are intended to ______ poverty throughout the country.", a: "be rid of", options: ["be rid of", "be aware of", "act on", "struggle with"], expl: "be rid of: 摆脱" },
+        { id: "p89_4", q: "Talk to someone... Don't let your depression ______.", a: "build up", options: ["build up", "brush aside", "cope with", "follow through"], expl: "build up: 积聚" },
+        { id: "p89_5", q: "An alarming number of physicians are unable to ______ the pressure of practicing everyday medicine.", a: "cope with", options: ["cope with", "reach out", "aside from", "be rid of"], expl: "cope with: 应对" },
+        { id: "p89_6", q: "It would do good if scholars could ______ and exchange ideas with their counterparts.", a: "reach out", options: ["reach out", "act on", "follow through", "build up"], expl: "reach out: 交流" },
+        { id: "p89_7", q: "Money remains to be a problem, but ______ that the plan is progressing nicely.", a: "aside from", options: ["aside from", "be aware of", "struggle with", "brush aside"], expl: "aside from: 除了" },
+        { id: "p89_8", q: "The company denied the rumors and ______ reports that it was on the verge of bankruptcy.", a: "brushed aside", options: ["brushed aside", "act on", "reach out", "cope with"], expl: "brush aside: 漠视" },
+        // Page 128 (Word Choice)
+        { id: "p128_1", q: "The company... has now ______ into a high-prestige enterprise that covers many domains.", a: "evolved", options: ["evolved", "displace", "bias", "foster"], expl: "evolve: 进化" },
+        { id: "p128_2", q: "For decades, the U.S. led the world... but in recent years it has been ______ by other countries.", a: "surpassed", options: ["surpassed", "manipulation", "multiply", "strategic"], expl: "surpass: 超过" },
+        { id: "p128_3", q: "After 30 years' living in Guangzhou, Elizabeth has been ______ into the local culture.", a: "assimilated", options: ["assimilated", "automatically", "proof", "minimize"], expl: "assimilate: 同化" },
+        { id: "p128_4", q: "The lawyer's arguments are well grounded because he has collected enough ______ concerning the case.", a: "proof", options: ["proof", "domain", "displace", "evolve"], expl: "proof: 证据" },
+        { id: "p128_5", q: "It is proved that playing sports can ______ the social development of young people.", a: "foster", options: ["foster", "bias", "manipulation", "multiply"], expl: "foster: 培养" },
+        { id: "p128_6", q: "Big-name employers... have a(n) ______ in favor of recruiting graduates from prestigious universities.", a: "bias", options: ["bias", "strategic", "automatically", "minimize"], expl: "bias: 偏见" },
+        { id: "p128_7", q: "There has been so much media ______ of the facts that nobody knows the truth of the issue.", a: "manipulation", options: ["manipulation", "displace", "assimilate", "domain"], expl: "manipulation: 操纵" },
+        { id: "p128_8", q: "The executives believed that combining the two work teams would ______ their strength by several times.", a: "multiply", options: ["multiply", "evolve", "proof", "surpass"], expl: "multiply: 成倍增加" },
+        { id: "p128_9", q: "It is the company's ______ decision to sell part of its business to focus on its core products.", a: "strategic", options: ["strategic", "foster", "bias", "automatically"], expl: "strategic: 战略性的" },
+        { id: "p128_10", q: "If the air pressure in aircraft cabin becomes lower, oxygen masks will ______ drop down.", a: "automatically", options: ["automatically", "manipulation", "minimize", "displace"], expl: "automatically: 自动地" },
+        { id: "p128_11", q: "These top-secret documents should never have been released into the public ______.", a: "domain", options: ["domain", "assimilate", "evolve", "multiply"], expl: "public domain: 公共领域" },
+        { id: "p128_12", q: "Environmentalists are doing everything... to ______ the impact of the oil spill.", a: "minimize", options: ["minimize", "surpass", "proof", "strategic"], expl: "minimize: 最小化" },
+        { id: "p128_13", q: "Some manual labor is bound to be ______ by artificial intelligence.", a: "displaced", options: ["displaced", "foster", "bias", "manipulation"], expl: "displace: 取代" },
+        // Page 129
+        { id: "p129_1", q: "He built up a successful business... but it was all done ______ his health.", a: "at the expense of", options: ["at the expense of", "be bound to", "queue up", "take in"], expl: "at the expense of: 以...为代价" },
+        { id: "p129_2", q: "The company's stock has declined... ______ last year when it gained 30 percent.", a: "in contrast with", options: ["in contrast with", "a metaphor for", "commit", "be well placed to"], expl: "in contrast with: 与...形成对比" },
+        { id: "p129_3", q: "When you have to cope with so many issues at the same time, mistakes ______ happen.", a: "are bound to", options: ["are bound to", "at the expense of", "in terms of", "queue up"], expl: "be bound to: 注定" },
+        { id: "p129_4", q: "The increasing number of solitary persons... is ______ the lack of communication in the modern world.", a: "a metaphor for", options: ["a metaphor for", "in contrast with", "take in", "be well placed to"], expl: "metaphor: 隐喻" },
+        { id: "p129_5", q: "In preparation for the scrabble competition, students are... trying to ______ the words to memory.", a: "commit", options: ["commit", "queue up", "be bound to", "at the expense of"], expl: "commit to memory: 记住" },
+        { id: "p129_6", q: "Leslie, still bothered by her unfinished work, was not ______ anything.", a: "taking in", options: ["taking in", "a metaphor for", "in contrast with", "in terms of"], expl: "take in: 理解" },
+        { id: "p129_7", q: "For the sake of security, visitors will have to ______ to pass through metal detectors.", a: "queue up", options: ["queue up", "be well placed to", "commit", "take in"], expl: "queue up: 排队" },
+        { id: "p129_8", q: "The executives believe that the Group ______ manage its business despite the uncertain economic environment.", a: "is well placed to", options: ["is well placed to", "be bound to", "a metaphor for", "in contrast with"], expl: "be well placed to: 处境优越" },
+        // Page 169
+        { id: "p169_1", q: "Farming technology enables the crops to be ______ by liquid fertilizer.", a: "nourished", options: ["nourished", "biased", "regime", "preach"], expl: "nourish: 滋养" },
+        { id: "p169_2", q: "Although she once ______ freedom and independence, she now gives up her career.", a: "preached", options: ["preached", "processed", "variable", "duration"], expl: "preach: 宣扬" },
+        { id: "p169_3", q: "The common nutrition advice usually includes... 'eat less ______ food and choose fresh food instead.'", a: "processed", options: ["processed", "prevail", "mirror", "definite"], expl: "processed food: 加工食品" },
+        { id: "p169_4", q: "These workshops, usually of a couple of days' ______, bring scholars and administers together.", a: "duration", options: ["duration", "biased", "nourished", "regime"], expl: "duration: 持续时间" },
+        { id: "p169_5", q: "His account of the situation was very ______ and you should check facts before making a judgment.", a: "biased", options: ["biased", "preach", "variable", "prevail"], expl: "biased: 有偏见的" },
+        { id: "p169_6", q: "Despite low interest rates, the concept of depositing money in the bank still ______ among the vast majority of people.", a: "prevails", options: ["prevails", "processed", "mirror", "definite"], expl: "prevail: 盛行" },
+        { id: "p169_7", q: "The sales of healthcare products have been increasing... which ______ the public's pursuit of health.", a: "mirrors", options: ["mirrors", "duration", "nourished", "preach"], expl: "mirror: 反映" },
+        { id: "p169_8", q: "Some people are anxious to try various health ______, but never stick to any of them.", a: "regimes", options: ["regimes", "biased", "processed", "variable"], expl: "regime: 疗法/制度" },
+        { id: "p169_9", q: "We have some statistics, but we really need something more ______ before we can make any firm decisions.", a: "definite", options: ["definite", "prevail", "mirror", "duration"], expl: "definite: 确定的" },
+        { id: "p169_10", q: "A study of hundreds of elderly people shows that some have similar lifestyles, but ______ in health conditions.", a: "variable", options: ["variable", "nourished", "regime", "preach"], expl: "variable: 多变的" },
+        // Page 170
+        { id: "p170_1", q: "The doctor cautions that this drug may have the effect of ______ the patients' heart rate.", a: "speeding up", options: ["speeding up", "on average", "make up", "that said"], expl: "speed up: 加速" },
+        { id: "p170_2", q: "______ people who consciously control their diet are healthier than those overeating.", a: "On average", options: ["On average", "take a leaf from sb.'s book", "one size fits all", "as well as"], expl: "on average: 平均而言" },
+        { id: "p170_3", q: "As a result, the method of ______ means convenience for policy makers, but not practical to local needs.", a: "one size fits all", options: ["one size fits all", "speed up", "make up", "on average"], expl: "one size fits all: 一刀切" },
+        { id: "p170_4", q: "He is studying like crazy to ______ the lessons he missed during his stay in the hospital.", a: "make up", options: ["make up", "that said", "as well as", "take a leaf from sb.'s book"], expl: "make up: 补上" },
+        { id: "p170_5", q: "When you are in a leadership position, many people will ______, whether intentionally or not.", a: "take a leaf from your book", options: ["take a leaf from your book", "speed up", "one size fits all", "make up"], expl: "take a leaf from one's book: 效仿某人" },
+        // Page 243
+        { id: "p243_1", q: "The meeting is open to everyone, whatever their religious **orientation**.", a: "This overseas company employs people without regard to their political orientation.", options: ["The department has arranged an orientation session...", "This overseas company employs people without regard to their political orientation.", "The company needs to develop a stronger orientation towards marketing..."], expl: "orientation: 倾向/信仰" },
+        { id: "p243_2", q: "The **likes**, comments and posts we share on social media connect us to the world.", a: "My new profile picture got more than 100 likes on WeChat Moments.", options: ["Boxing hasn't seen the likes of Muhammad Ali since he retired.", "There's a big sports hall for tennis and badminton and such like.", "My new profile picture got more than 100 likes on WeChat Moments."], expl: "like: 点赞" },
+        { id: "p243_4", q: "Dylan's latest record is a **conscious** attempt to break away from his old image.", a: "Julia made a conscious effort to appear unconcerned...", options: ["Julia made a conscious effort to appear unconcerned...", "She was very conscious of being the only one without a degree.", "She was fully conscious throughout the surgery..."], expl: "conscious: 有意的" },
+        { id: "p243_5", q: "She frequently **exploits** her authority by getting other people to do things for her.", a: "Many employers are only too ready to exploit and underpay female workers.", options: ["The country's natural resources have not yet been fully exploited.", "She said the tragedy had been exploited by the media...", "Many employers are only too ready to exploit and underpay female workers."], expl: "exploit: 剥削/滥用" },
+        // Page 289
+        { id: "p289_1", q: "Some soldiers are still ______ by war memories and by images of violence.", a: "haunted", options: ["haunted", "impose", "suspension", "repression"], expl: "haunt: 萦绕/困扰" },
+        { id: "p289_2", q: "The team could barely ______ their disappointment when the result of the robot contest was announced.", a: "conceal", options: ["conceal", "suspension", "reflection", "impose"], expl: "conceal: 掩饰" },
+        { id: "p289_3", q: "While his company was under investigation... some partners ______ to deny any involvement with his business.", a: "hastened", options: ["hastened", "haunt", "reflection", "repression"], expl: "hasten: 急忙" },
+        { id: "p289_4", q: "There have been calls for the drug's immediate ______, following reports that it has dangerous side effects.", a: "suspension", options: ["strive", "repression", "persistence", "suspension"], expl: "suspension: 暂停" },
+        { id: "p289_5", q: "The manager originally had discounted the initiative, but after much ______ he agreed to see how it would fare.", a: "reflection", options: ["procession", "repression", "reflection", "hasten"], expl: "reflection: 深思" },
+        { id: "p289_6", q: "Multiple experiments have demonstrated that the ______ of anger can be detrimental to both physical and mental health.", a: "repression", options: ["repression", "hasten", "strive", "conceal"], expl: "repression: 压抑" },
+        { id: "p289_7", q: "Generations of Chinese astronomers have been working hard, ______ for a greater understanding of the processes that occur inside stars.", a: "striving", options: ["reflection", "striving", "suspension", "persistence"], expl: "strive: 奋斗" },
+        { id: "p289_8", q: "After a(n) ______ of product quality accidents, the food company now has very low prestige among consumers.", a: "procession", options: ["procession", "repression", "suspension", "persistence"], expl: "procession: 一连串" },
+        { id: "p289_9", q: "He said his achievements were partially attributed to his quiet ______, especially in hard times.", a: "persistence", options: ["persistence", "haunt", "impose", "conceal"], expl: "persistence: 坚持" },
+        { id: "p289_10", q: "Parents are usually inclined to ______ their own moral values on their children.", a: "impose", options: ["strive", "reflection", "impose", "conceal"], expl: "impose on: 强加" },
+        { id: "p289_e1", q: "After being informed of winning the lottery, his imagination was ______, thinking of all the ways he could spend the money.", a: "running riot", options: ["running riot", "count for", "beat back", "drink in"], expl: "run riot: 奔放" },
+        { id: "p289_e2", q: "At first, she had concerns about telling the truth, but ______, she opened up and disclosed the secret.", a: "at length", options: ["at length", "under one's breath", "spend itself", "run riot"], expl: "at length: 终于" },
+        { id: "p289_e3", q: "The former president was reluctant to admit the fact that his influence had ______ less ever since he resigned.", a: "counted for", options: ["counted for", "drink in", "beat back", "under one's breath"], expl: "count for: 有价值" },
+        { id: "p289_e4", q: "Hearing the good news, he muttered ______ 'Thank God!' and felt greatly relieved.", a: "under his breath", options: ["under his breath", "run riot", "at length", "count for"], expl: "under one's breath: 低声地" },
+        { id: "p289_e5", q: "After days of boring finger practice, the little boy's initial surge of interest in playing the piano ______ at length.", a: "spent itself", options: ["spent itself", "beat back", "drink in", "run riot"], expl: "spend itself: 耗尽" },
+        { id: "p289_e6", q: "The hot dry weather with strong wind prevented firemen from ______ the wildfire within short time.", a: "beating back", options: ["beating back", "count for", "spend itself", "at length"], expl: "beat back: 击退" },
+        { id: "p289_e7", q: "For a moment she just sat there, enjoying the beautiful scene and ______ the fond memories of childhood.", a: "drinking in", options: ["drinking in", "under one's breath", "run riot", "spend itself"], expl: "drink in: 陶醉于" }
+    ];
+
+    // ================= 核心逻辑 =================
+    const KEY_STATS = 'eng_v7_final_stats';
+    let stats = { big: {}, gold: {}, quiz: {} };
+
+    window.onload = function() {
+        try {
+            const saved = localStorage.getItem(KEY_STATS);
+            if (saved) stats = JSON.parse(saved);
+            
+            // 初始化记忆点数
+            bigTransDB.forEach(i => { if(!stats.big[i.id]) stats.big[i.id] = 10; });
+            goldTransDB.forEach(i => { if(!stats.gold[i.id]) stats.gold[i.id] = 10; });
+            quizDB.forEach(i => { if(!stats.quiz[i.id]) stats.quiz[i.id] = 0; });
+
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+
+            renderBigTrans();
+            renderGoldTrans();
+            renderQuiz();
+            renderMistakes();
+        } catch (e) {
+            console.error(e);
+            hardReset();
+        }
+    };
+
+    function saveStats() {
+        localStorage.setItem(KEY_STATS, JSON.stringify(stats));
+        renderMistakes();
+    }
+
+    function switchTab(id, btn) {
+        document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
+    function showToast(msg, type) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = type === 'success' ? `✅ ${msg}` : `🧠 ${msg}`;
+        container.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2000);
+    }
+
+    // --- 1. 长难句 (5句/组) ---
+    function renderBigTrans() {
+        const listDiv = document.getElementById('bigTrans-list');
+        listDiv.innerHTML = '';
+        let list = bigTransDB.map(i => ({...i, w: stats.big[i.id] + Math.random()*5}));
+        list.sort((a,b) => b.w - a.w);
+        
+        list.slice(0, 5).forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'trans-card anim-item';
+            div.style.animationDelay = `${idx * 0.05}s`;
+            div.innerHTML = `
+                <div class="mp-badge" id="badge-big-${item.id}">点数: ${Math.floor(stats.big[item.id])}</div>
+                <div class="cn-text">${item.cn}</div>
+                <button class="btn btn-reveal" onclick="this.nextElementSibling.style.display='block';this.style.display='none'">👀 查看英文</button>
+                <div class="en-box">
+                    <div class="en-text">${item.en}</div>
+                    <div style="margin-top:15px; display:flex; justify-content:flex-end; gap:10px;">
+                        <button class="btn btn-no" onclick="updateW('big', '${item.id}', 5)">❌ 不会</button>
+                        <button class="btn btn-yes" onclick="updateW('big', '${item.id}', -2)">✅ 会了</button>
+                    </div>
+                </div>
+            `;
+            listDiv.appendChild(div);
+        });
+    }
+
+    // --- 2. 金句 (15句/组) ---
+    function renderGoldTrans() {
+        const listDiv = document.getElementById('goldTrans-list');
+        listDiv.innerHTML = '';
+        let list = goldTransDB.map(i => ({...i, w: stats.gold[i.id] + Math.random()*5}));
+        list.sort((a,b) => b.w - a.w);
+        
+        list.slice(0, 15).forEach((item, idx) => {
+            const container = document.createElement('div');
+            container.className = 'flashcard-container anim-item';
+            container.style.animationDelay = `${idx * 0.03}s`;
+            container.innerHTML = `
+                <div class="flashcard-inner">
+                    <div class="flash-front"><div>${item.cn}</div><div style="font-size:12px;color:#aaa;">(点击翻转)</div></div>
+                    <div class="flash-back">
+                        <div class="mp-badge" id="badge-gold-${item.id}" style="top:5px;right:5px;">${Math.floor(stats.gold[item.id])}</div>
+                        <div class="flash-en-text">${item.en}</div>
+                        <div class="flash-btns">
+                            <button class="btn btn-no" onclick="event.stopPropagation();updateW('gold','${item.id}',5)">❌</button>
+                            <button class="btn btn-yes" onclick="event.stopPropagation();updateW('gold','${item.id}',-2)">✅</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.onclick = function() { this.classList.toggle('flipped'); };
+            listDiv.appendChild(container);
+        });
+    }
+
+    // --- 3. 选择题 (10题/组) ---
+    function renderQuiz() {
+        const listDiv = document.getElementById('quiz-list');
+        listDiv.innerHTML = '';
+        let list = quizDB.map(i => ({...i, w: (stats.quiz[i.id]*10) + Math.random()}));
+        list.sort((a,b) => b.w - a.w);
+        
+        list.slice(0, 10).forEach((item, idx) => {
+            let opts = [...item.options].sort(() => 0.5 - Math.random());
+            let optsHtml = opts.map(o => `<div class="opt-btn" onclick="checkQuiz(this,'${item.id}','${o.replace(/'/g,"\\'")}', '${item.a.replace(/'/g,"\\'")}', 'fb-${idx}')">${o}</div>`).join('');
+            
+            const div = document.createElement('div');
+            div.className = 'quiz-card anim-item';
+            div.style.animationDelay = `${idx * 0.05}s`;
+            div.innerHTML = `
+                <div class="q-text">${idx+1}. ${item.q.replace('______', '______')}</div>
+                <div class="opt-grid">${optsHtml}</div>
+                <div id="fb-${idx}" class="quiz-feedback"><strong>解析：</strong>${item.expl}<br><strong>答案：</strong>${item.a}</div>
+            `;
+            listDiv.appendChild(div);
+        });
+    }
+
+    function checkQuiz(el, id, uVal, cVal, fbId) {
+        if(el.parentElement.classList.contains('done')) return;
+        el.parentElement.classList.add('done');
+        const fbDiv = document.getElementById(fbId);
+        fbDiv.style.display = 'block';
+        
+        if(uVal === cVal) {
+            el.classList.add('correct');
+            if(stats.quiz[id] > 0) stats.quiz[id]--;
+            showToast("回答正确！", "success");
+        } else {
+            el.classList.add('wrong');
+            stats.quiz[id]++;
+            showToast("回答错误", "error");
+            Array.from(el.parentElement.children).forEach(c => {
+                if(c.innerText.trim() === cVal) c.classList.add('correct');
+            });
+        }
+        saveStats();
+    }
+
+    function updateW(type, id, change) {
+        stats[type][id] = Math.max(0, stats[type][id] + change);
+        saveStats();
+        const badge = document.getElementById(`badge-${type}-${id}`);
+        if(badge) badge.innerText = type==='gold' ? `${Math.floor(stats[type][id])}` : `点数: ${Math.floor(stats[type][id])}`;
+        showToast(change > 0 ? "记忆点数 +5" : "记忆点数 -2", change>0?'error':'success');
+    }
+
+    // --- 错题本 ---
+    function renderMistakes() {
+        const div = document.getElementById('mistake-list');
+        let h1 = bigTransDB.filter(i => stats.big[i.id] > 12);
+        let h2 = goldTransDB.filter(i => stats.gold[i.id] > 12);
+        let h3 = quizDB.filter(i => stats.quiz[i.id] > 0);
+        
+        if(h1.length + h2.length + h3.length === 0) {
+            div.innerHTML = '<div style="text-align:center; padding:30px; color:#aaa;">暂无高频错题</div>';
+            return;
+        }
+        
+        let html = '';
+        h1.forEach(i => html += `<div class="mistake-item"><div><span style="color:var(--blue-mode);font-weight:bold;">[长难句]</span> ${i.cn}</div><div style="font-weight:bold;color:#e74c3c">${Math.floor(stats.big[i.id])}</div></div>`);
+        h2.forEach(i => html += `<div class="mistake-item"><div><span style="color:var(--gold-mode);font-weight:bold;">[金句]</span> ${i.cn}</div><div style="font-weight:bold;color:#e74c3c">${Math.floor(stats.gold[i.id])}</div></div>`);
+        h3.forEach(i => html += `<div class="mistake-item"><div><span style="color:var(--green-mode);font-weight:bold;">[选择]</span> ${i.q.substring(0,40)}...</div><div style="font-weight:bold;color:#e74c3c">错${stats.quiz[i.id]}</div></div>`);
+        div.innerHTML = html;
+    }
+
+    function exportPDF() {
+        if(window.pdfLoadError) return alert("网络原因导致 PDF 组件加载失败。");
+        const doc = new window.jspdf.jsPDF();
+        doc.text("Mistakes Review", 10, 10);
+        let y = 20; doc.setFontSize(10);
+        bigTransDB.filter(i=>stats.big[i.id]>12).forEach(i => {
+            let lines = doc.splitTextToSize(i.en, 180); doc.text(lines, 10, y); y += lines.length * 5 + 5;
+        });
+        doc.save('mistakes.pdf');
+    }
+
+    function hardReset() {
+        if(confirm("确定清空所有数据？")) { localStorage.removeItem(KEY_STATS); location.reload(); }
+    }
+</script>
+</body>
+</html>
