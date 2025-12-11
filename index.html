@@ -660,10 +660,10 @@ function renderQuiz() {
         
         if (isCorrect) {
             el.classList.add('correct');
-            updateStat('quiz', id, true, false); 
+            updateStat('quiz', id, true, true); 
         } else {
             el.classList.add('wrong');
-            updateStat('quiz', id, false, false);
+            updateStat('quiz', id, false, true);
             Array.from(el.parentElement.children).forEach(c => {
                 if(c.innerText.trim() === cVal) c.classList.add('correct');
             });
@@ -814,3 +814,4 @@ function renderQuiz() {
 </body>
 
 </html>
+
