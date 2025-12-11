@@ -606,9 +606,15 @@
         });
     }
 
-    function renderQuiz() {
+function renderQuiz() {
         const listDiv = document.getElementById('quiz-list');
         listDiv.innerHTML = '';
+        
+        // 辅助函数：专门处理引号转义，防止 HTML 崩坏
+        const safeStr = (str) => {
+            return str.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        };
+
         let list = quizDB.map(i => {
             const s = stats.quiz[i.id] || {mp:10, c:0, w:0};
             return {...i, mp: s.mp, c: s.c, w: s.w, sort: s.mp + Math.random()*5};
@@ -617,7 +623,11 @@
         
         list.slice(0, 10).forEach((item, idx) => {
             let opts = [...item.options].sort(() => 0.5 - Math.random());
-            let optsHtml = opts.map(o => `<div class="opt-btn" onclick="checkQuiz(this,'${item.id}','${o.replace(/'/g,"\\'")}', '${item.a.replace(/'/g,"\\'")}', 'fb-${idx}')">${o}</div>`).join('');
+            
+            // 【核心修改】使用了 safeStr 处理 item.a 和 o
+            let optsHtml = opts.map(o => 
+                `<div class="opt-btn" onclick="checkQuiz(this,'${item.id}','${safeStr(o)}', '${safeStr(item.a)}', 'fb-${idx}')">${o}</div>`
+            ).join('');
             
             const div = document.createElement('div');
             div.className = 'quiz-card anim-item';
@@ -665,8 +675,8 @@
         
         if(isCorrect) {
             stats[type][id].c++;
-            stats[type][id].mp = Math.max(0, stats[type][id].mp - 2);
-            if(showMsg) showToast("正确！记忆点数 -2", "success");
+            stats[type][id].mp = Math.max(0, stats[type][id].mp - 3);
+            if(showMsg) showToast("正确！记忆点数 -3", "success");
         } else {
             stats[type][id].w++;
             stats[type][id].mp += 5;
@@ -802,4 +812,5 @@
     }
 </script>
 </body>
+
 </html>
