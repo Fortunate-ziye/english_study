@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英语考试重点 (真改不动了)</title>
+    
+    <style>
+        :root {
+            --primary: #2c3e50; 
+            --blue-mode: #3498db;   /* 长难句 */
+            --gold-mode: #f1c40f;   /* 金句 */
+            --green-mode: #27ae60;  /* 选择题 */
+            --bg: #f8f9fa; 
+            --card-bg: #ffffff;
+        }
+
+        body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; margin: 0; padding: 20px; background: var(--bg); color: #333; overflow-x: hidden; }
+        .container { max-width: 1000px; margin: 0 auto; display: none; padding-bottom: 60px; }
+
+        /* 动画 */
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .anim-item { opacity: 0; animation: fadeInUp 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
+
+        /* 导航 */
+        .header { text-align: center; margin-bottom: 30px; animation: fadeInUp 0.6s ease; }
+        .nav-tabs { display: flex; justify-content: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+        .nav-btn {
+            padding: 10px 22px; border: none; border-radius: 50px; cursor: pointer;
+            font-size: 15px; font-weight: bold; transition: all 0.3s;
+            background: #e0e0e0; color: #7f8c8d; display: flex; align-items: center; gap: 6px;
+        }
+        .nav-btn.active { color: white; transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .nav-btn[data-theme="blue"].active { background: var(--blue-mode); }
+        .nav-btn[data-theme="gold"].active { background: var(--gold-mode); }
+        .nav-btn[data-theme="green"].active { background: var(--green-mode); }
+        .nav-btn[data-theme="red"].active { background: #c0392b; }
+
+        /* 模块与控件 */
+        .section { display: none; }
+        .section.active { display: block; }
+        .control-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; animation: fadeInUp 0.4s ease; flex-wrap: wrap; gap: 10px; }
+        .btn-refresh { padding: 10px 25px; border-radius: 25px; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 14px; }
+        .btn-refresh:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+        /* 数据标签 */
+        .stat-badge {
+            position: absolute; top: 15px; right: 15px; 
+            font-size: 12px; display: flex; gap: 5px;
+        }
+        .stat-tag { padding: 3px 8px; border-radius: 4px; font-weight: bold; color: #fff; }
+        .tag-mp { background: #95a5a6; } /* 记忆点数 */
+        .tag-ok { background: #27ae60; } /* 正确次数 */
+        .tag-no { background: #e74c3c; } /* 错误次数 */
+
+        /* 卡片: 长难句 */
+        .trans-card {
+            background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 20px;
+            border-left: 5px solid var(--blue-mode); box-shadow: 0 3px 10px rgba(52, 152, 219, 0.1);
+            transition: 0.3s; position: relative;
+        }
+        .cn-text { font-size: 18px; font-weight: 600; margin-bottom: 15px; color: #2c3e50; line-height: 1.6; padding-right: 80px; }
+        .en-box { background: #f0f7fb; padding: 20px; border-radius: 8px; margin-top: 15px; display: none; border: 1px solid #d6eaf8; }
+        .en-text { font-size: 16px; color: #2980b9; font-weight: 500; }
+
+        /* 卡片: 金句 */
+        .flash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; perspective: 1000px; }
+        .flashcard-container { background: transparent; height: 180px; width: 100%; perspective: 1000px; cursor: pointer; }
+        .flashcard-inner {
+            position: relative; width: 100%; height: 100%; text-align: center;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d; box-shadow: 0 4px 10px rgba(243, 156, 18, 0.15); border-radius: 15px;
+        }
+        .flashcard-container.flipped .flashcard-inner { transform: rotateY(180deg); }
+        .flash-front, .flash-back {
+            position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            border-radius: 15px; padding: 15px; box-sizing: border-box; border: 2px solid #f9e79f; background: white;
+        }
+        .flash-front { color: #555; font-weight: bold; font-size: 16px; }
+        .flash-back { background: #fef9e7; transform: rotateY(180deg); border-color: #f39c12; color: #d35400; justify-content: space-between; }
+        .flash-stats { font-size: 11px; color: #999; margin-bottom: 5px; display: flex; gap: 5px; } 
+        .flash-btns { display: flex; gap: 8px; width: 100%; justify-content: center; pointer-events: auto; }
+
+        /* 卡片: 选择题 */
+        .quiz-card {
+            background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 20px;
+            border-top: 4px solid var(--green-mode); box-shadow: 0 4px 15px rgba(39, 174, 96, 0.08); position: relative;
+        }
+        .q-text { font-size: 18px; margin-bottom: 20px; font-weight: 600; line-height: 1.5; padding-right: 100px; }
+        .q-text b { color: #d35400; background: #fff3cd; padding: 0 2px; border-radius: 3px; }
+        .opt-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        .opt-btn { 
+            padding: 15px; border: 2px solid #f0f0f0; border-radius: 10px; cursor: pointer; 
+            background: #fff; transition: 0.2s; font-size: 15px; color: #555; text-align: left;
+            line-height: 1.4;
+        }
+        .opt-btn:hover { border-color: var(--green-mode); background: #f9fff9; }
+        .opt-btn.correct { background: #d4edda; border-color: #28a745; color: #155724; font-weight: bold; }
+        .opt-btn.wrong { background: #f8d7da; border-color: #dc3545; color: #721c24; opacity: 0.7; }
+        .quiz-feedback { 
+            margin-top: 20px; padding: 15px; background: #e8f5e9; border-left: 4px solid var(--green-mode); 
+            border-radius: 4px; color: #2e7d32; display: none; animation: fadeInUp 0.3s ease; 
+        }
+        .quiz-trans { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #a5d6a7; font-style: italic; color: #1b5e20; font-size: 14px; }
+
+        /* ====== 错题档案新样式 ====== */
+        .mistake-item {
+            background: #fff;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            overflow: hidden;
+            border: 1px solid #eee;
+        }
+        .mistake-summary {
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            transition: background 0.2s;
+        }
+        .mistake-summary:hover { background: #f8f9fa; }
+        .mistake-summary::after {
+            content: '▼'; font-size: 12px; color: #999; margin-left: 10px; transition: 0.3s;
+        }
+        .mistake-item.open .mistake-summary::after { transform: rotate(180deg); }
+        .mistake-detail {
+            display: none;
+            padding: 15px;
+            background: #fafafa;
+            border-top: 1px solid #eee;
+            color: #555;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .mistake-item.open .mistake-detail { display: block; animation: fadeInUp 0.3s; }
+        .tag-type { font-size: 12px; padding: 2px 6px; border-radius: 3px; margin-right: 8px; color: #fff; }
+        .tag-blue { background: var(--blue-mode); }
+        .tag-gold { background: var(--gold-mode); }
+        .tag-green { background: var(--green-mode); }
+
+        /* 按钮与提示 */
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; font-size: 13px; }
+        .btn:hover { transform: scale(1.05); }
+        .btn:active { transform: scale(0.95); }
+        .btn-reveal { background: #95a5a6; width: 100%; padding: 12px; font-size: 14px; }
+        .btn-yes { background: #27ae60; }
+        .btn-no { background: #e74c3c; }
+        
+        #toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 10000; pointer-events: none; }
+        .toast {
+            background: rgba(0,0,0,0.85); color: white; padding: 12px 25px; border-radius: 30px;
+            margin-top: 10px; font-size: 14px; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: flex; align-items: center; gap: 8px; animation: fadeInUp 0.3s;
+        }
+        .toast.success { border-left: 5px solid #27ae60; }
+        .toast.error { border-left: 5px solid #e74c3c; }
+
+        /* 打印专用样式 (用于导出) */
+        @media print {
+            body { background: white; padding: 0; }
+            .header, .nav-tabs, .control-bar, .force-btn, #toast-container { display: none !important; }
+            .container { display: block !important; width: 100%; max-width: 100%; }
+            .section { display: none !important; }
+            /* 只显示打印区域 */
+            #print-area { display: block !important; }
+            .print-item { break-inside: avoid; border-bottom: 1px solid #ddd; padding: 15px 0; }
+            .print-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+            .print-detail { font-size: 12px; color: #666; }
+        }
+        #print-area { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<div id="app-content">
+    <div class="header">
+        <h2 style="margin:0; color:#2c3e50;">英语考试重点 <span style="font-size:14px; font-weight:normal; color:#aaa;">来自双鱼的忧愁版</span></h2>
+        <div class="nav-tabs">
+            <button class="nav-btn active" data-theme="blue" onclick="switchTab('bigTrans', this)">📘 长难句特训</button>
+            <button class="nav-btn" data-theme="gold" onclick="switchTab('goldTrans', this)">🌟 金句速记</button>
+            <button class="nav-btn" data-theme="green" onclick="switchTab('quiz', this)">📝 语法选择</button>
+            <button class="nav-btn" data-theme="red" onclick="switchTab('mistakes', this)">📕 错题档案</button>
+        </div>
+    </div>
+
+    <div id="bigTrans" class="section active">
+        <div class="control-bar">
+            <span style="color:var(--blue-mode); font-weight:bold;">句对句精读 (5句/组)</span>
+            <button class="btn btn-refresh" style="background:var(--blue-mode)" onclick="renderBigTrans()">🔄 换下一组</button>
+        </div>
+        <div id="bigTrans-list"></div>
+    </div>
+
+    <div id="goldTrans" class="section">
+        <div class="control-bar">
+            <span style="color:var(--gold-mode); font-weight:bold;">快速刷词 (15词/组)</span>
+            <button class="btn btn-refresh" style="background:var(--gold-mode)" onclick="renderGoldTrans()">🔄 换下一组</button>
+        </div>
+        <div id="goldTrans-list" class="flash-grid"></div>
+    </div>
+
+    <div id="quiz" class="section">
+        <div class="control-bar">
+            <span style="color:var(--green-mode); font-weight:bold;">单选/填空 (10题/组)</span>
+            <button class="btn btn-refresh" style="background:var(--green-mode)" onclick="renderQuiz()">🔄 换下一组</button>
+        </div>
+        <div id="quiz-list"></div>
+    </div>
+
+    <div id="mistakes" class="section">
+        <div class="control-bar">
+            <strong>🔥 待复习 (错题 > 0 或 点数 > 12)</strong>
+            <div>
+                <button class="btn" style="background:#34495e" onclick="printMistakes()">🖨️ 导出/打印 (PDF)</button>
+                <button class="btn btn-no" onclick="hardReset()">🗑️ 清空数据</button>
+            </div>
+        </div>
+        <div style="font-size:12px; color:#7f8c8d; margin-bottom:15px;">💡 点击下方题目可查看详情与解析</div>
+        <div id="mistake-list"></div>
+    </div>
+</div>
+
+<div id="print-area">
+    <h1 style="text-align:center;">错题与重点复习清单</h1>
+    <div style="text-align:center; font-size:12px; color:#666; margin-bottom:20px;">生成时间：<span id="print-date"></span></div>
+    <div id="print-content"></div>
+</div>
+
+<script>
+    // ================= 数据源 (保持不变) =================
+    // 1. 长难句
+    const bigTransDB = [
+        { id: "bt_1", cn: "中国是一个幅员辽阔、海岸线长的国家，受全球变暖的不利影响很大。", en: "China is a vast country with a long coastline and is heavily affected by the adverse effects of global warming." },
+        { id: "bt_2", cn: "中国正采取积极措施以应对全球变暖。", en: "China is taking active measures to combat global warming." },
+        { id: "bt_3", cn: "一、实施可持续发展战略，加强环境保护。", en: "Firstly, it will implement the strategy of sustainable development and strengthen environmental protection." },
+        { id: "bt_4", cn: "二、推进节能减排，控制碳排放量。", en: "Secondly, it will promote energy saving and emission reduction, and control the amount of carbon emissions." },
+        { id: "bt_5", cn: "三、改善能源结构，开发新能源和可再生能源。", en: "Thirdly, it will improve the energy structure and develop new and renewable energy." },
+        { id: "bt_6", cn: "四、扩大森林面积。", en: "Lastly, it will expand forest areas." },
+        { id: "bt_7", cn: "森林对于吸收二氧化碳具有重要意义。", en: "Forests are significant for absorbing carbon dioxide." },
+        { id: "bt_8", cn: "全球森林面积总体上在减少，而中国的森林覆盖率逐年有所提高。", en: "The global forest area overall is decreasing, while China's forest coverage rate is increasing year by year." },
+        { id: "bt_9", cn: "全球变暖对于生活在地球上的每一个认都会有影响。", en: "Global warming will affect everyone who lives on the Earth." },
+        { id: "bt_10", cn: "中国作为一个负责任的大国，现在和将来都会坚持履行自己应负的责任。", en: "As a responsible major country, China will continue to fulfill its responsibilities at present and in the future." },
+        { id: "bt_11", cn: "中国人工智能起步较晚。", en: "China is a late starter in artificial intelligence." },
+        { id: "bt_12", cn: "不过，改革开放以来，尤其是近十年，中国的人工智能发展迅速。", en: "However, since the reform and opening up, especially in the recent decade, China's AI has been developing rapidly." },
+        { id: "bt_13", cn: "人工智能的发展已成为一项国家战略。", en: "The development of AI has become a national strategy." },
+        { id: "bt_14", cn: "有数十万计的科学技术人员和大学师生从事人工智能的研究、学习、开发与应用。", en: "There are hundreds of thousands of scientific and technical personnel, university teachers and students engaged in the research, learning, development and application of AI." },
+        { id: "bt_15", cn: "互联网和大数据推动人工智能进入了新的发展阶段。", en: "The Internet and big data have pushed AI into a new stage of development." },
+        { id: "bt_16", cn: "中国在人工智能方面取得了突破。", en: "China has made breakthroughs in AI." },
+        { id: "bt_17", cn: "已在自然语言处理、语音识别、图像识别、机器视觉、虚拟现实、智能驾驶和智能机器人等领域取得了一大批具有国际先进水平的应用成果。", en: "It has achieved a large number of internationally advanced application results in fields like natural language processing, speech recognition, image recognition, machine vision, virtual reality, intelligent driving and intelligent robots." },
+        { id: "bt_18", cn: "目前，无人机送货在许多国家受到重视。", en: "At present, drone delivery is valued in many countries." },
+        { id: "bt_19", cn: "美国已经批准了无人机用于商用送货。", en: "The United States has approved drones for commercial delivery." },
+        { id: "bt_20", cn: "中国的阿里巴巴、京东和顺丰也已开始尝试无人机送货。", en: "China's Alibaba, JD.com and SF Express have also begun experimenting with drone delivery." },
+        { id: "bt_21", cn: "不过，想要这一服务成为可能，必须要解决两大难题。", en: "But to make the service possible, two big problems must be solved." },
+        { id: "bt_22", cn: "二是噪声问题。无人机飞行过程中会产生噪声。", en: "One is noise. Drones make noise during flight." },
+        { id: "bt_23", cn: "货物越重，就需要更大的无人机，更大的无人机就会产生更大的噪声污染。", en: "The heavier the cargo, the greater the need for larger drones, and larger drones will generate more noise pollution." },
+        { id: "bt_24", cn: "二是隐私问题。", en: "The other is privacy." },
+        { id: "bt_25", cn: "无人机在飞行过程中，可能收集到居民的个人信息。", en: "During the flight, drones may collect the residents' personal information." },
+        { id: "bt_26", cn: "这些信息可能被坏人利用，从而引发各种犯罪活动。", en: "These information may be used by evil people and trigger various criminal activities." },
+        { id: "bt_27", cn: "这两大问题是所有计划使用无人机送货服务的公司亟待解决的问题。", en: "These are two major problems that have to be addressed by all companies planning to use drone delivery services." },
+        { id: "bt_28", cn: "据一项调查，中国网民日均使用社交媒体的时间超过三个小时。", en: "According to a survey, Chinese netizens use social media for more than three hours per day." },
+        { id: "bt_29", cn: "社交媒体是增加了人与人之间的联系，还是拉大了人与人之间的距离？", en: "Have the social media increased the contact between people or widened their distance?" },
+        { id: "bt_30", cn: "这似乎是一个很难回答的问题。", en: "That seems to be a tough question to answer." },
+        { id: "bt_31", cn: "这些平台确实缩短了人们在时间与空间上的距离，但心理的距离似乎在拉大。", en: "These platforms do shorten the distance between people in time and space, but their psychological distance seems to be widening." },
+        { id: "bt_32", cn: "有时，人们宁可低头给社交媒体里远方的陌生人发十条评论，也不愿意抬头与面前的朋友有眼神交流。", en: "Sometimes people would rather look down and send 10 comments to distant strangers on social media than look up and make eye contact with friends in front of them." },
+        { id: "bt_33", cn: "以前，人们把朋友分为两种：深交和点头之交。", en: "In the past, people divided friends into two types: close friends and nodding friends." },
+        { id: "bt_34", cn: "现在似乎又多了一种，称为“点赞之交”。", en: "Now there seems to be another kind of friends called 'thumbs-up friends'." },
+        { id: "bt_35", cn: "但是，在社交媒体上泛滥的“点赞”里，能有多少真挚的友情呢？", en: "But how much genuine friendship can there be in the 'likes' that flood the social media?" }
+    ];
+
+    // 2. 金句库
+    const goldTransDB = [
+        { id: "gt_1", cn: "铭记历史", en: "Remember history" }, { id: "gt_2", cn: "缅怀先烈", en: "Honor the fallen" },
+        { id: "gt_3", cn: "珍爱和平", en: "Cherish peace" }, { id: "gt_4", cn: "开创未来", en: "Open up the future" },
+        { id: "gt_5", cn: "抗日民族统一战线", en: "National united front against Japanese aggression" },
+        { id: "gt_6", cn: "人类命运休戚与共", en: "Humanity shares a common destiny" },
+        { id: "gt_7", cn: "守望相助", en: "Support one another" }, { id: "gt_8", cn: "维护共同安全", en: "Safeguard common security" },
+        { id: "gt_9", cn: "消弭战争根源", en: "Eliminate the root cause of war" }, { id: "gt_10", cn: "对话还是对抗", en: "Dialogue or confrontation" },
+        { id: "gt_11", cn: "共赢还是零和", en: "Win-win outcomes or zero-sum games" }, { id: "gt_12", cn: "神圣职责", en: "Sacred duties" },
+        { id: "gt_13", cn: "世界一流军队", en: "World-class forces" }, { id: "gt_14", cn: "国家主权", en: "National sovereignty" },
+        { id: "gt_15", cn: "领土完整", en: "Territorial integrity" }, { id: "gt_16", cn: "中华民族伟大复兴", en: "The great rejuvenation of the Chinese nation" },
+        { id: "gt_17", cn: "血肉之躯筑长城", en: "Building a great wall with their flesh and blood" },
+        { id: "gt_18", cn: "反抗外敌入侵", en: "Against foreign aggression" }, { id: "gt_19", cn: "拯救人类文明", en: "The salvation of human civilization" },
+        { id: "gt_20", cn: "构建人类命运共同体", en: "Build a community with a shared future for humanity" },
+        { id: "gt_21", cn: "踔厉奋发、勇毅前行", en: "Forge ahead with determination and courage" },
+        { id: "gt_22", cn: "中国式现代化", en: "Chinese modernization" }, { id: "gt_23", cn: "强国建设", en: "Build a strong country" },
+        { id: "gt_24", cn: "民族复兴", en: "National rejuvenation" },
+        { id: "gt_25", cn: "战略支撑", en: "Strategic support" }, { id: "gt_26", cn: "巨大的民族牺牲", en: "Immense national sacrifice" },
+        { id: "gt_27", cn: "保卫世界和平", en: "The defense of world peace" }, { id: "gt_28", cn: "和平发展道路", en: "The path of peaceful development" },
+        { id: "gt_29", cn: "中国人民解放军", en: "The Chinese People's Liberation Army (PLA)" }, { id: "gt_30", cn: "世界和平与发展", en: "World peace and development" },
+        { id: "gt_31", cn: "新时代新征程", en: "New journey in the new era" }, { id: "gt_32", cn: "中国共产党", en: "The Communist Party of China (CPC)" },
+        { id: "gt_33", cn: "中国特色社会主义道路", en: "The path of socialism with Chinese characteristics" }, { id: "gt_34", cn: "伟大抗战精神", en: "The great spirit of the War of Resistance" },
+        { id: "gt_35", cn: "东方主战场", en: "The main eastern theater" }, { id: "gt_36", cn: "中国人民抗日战争", en: "Chinese People's War of Resistance against Japanese Aggression" },
+        { id: "gt_37", cn: "世界反法西斯战争", en: "World Anti-Fascist War" }, { id: "gt_38", cn: "阅兵重要讲话金句", en: "Key quotes from the parade speech" }
+    ];
+
+// 3. 全量题库 (Quiz) - 已补充缺失的翻译
+    const quizDB = [
+        // --- Page 16: Language Enhancement 1 (Word Choice) ---
+        { id: "p16_1", q: "A large quantity of real cases suggest that the average speed of the vehicles ______ closely with the severity of the accident caused.", a: "correlates", options: ["refund", "correlates", "inherit", "proclaim"], trans: "大量真实案例表明，车速与事故严重程度密切相关。", expl: "correlate with: 与...相关" },
+        { id: "p16_2", q: "In schools, teachers and pupils alike often ______ that if a concept has been easy to learn, then the lesson has been successful.", a: "assume", options: ["assume", "range", "rig", "inherit"], trans: "在学校，师生常认为如果概念容易学，课就成功了。", expl: "assume: 假设，认为" },
+        { id: "p16_3", q: "The company's new president will have to ______ some complicated legal problems from his predecessor.", a: "inherit", options: ["inherit", "innovate", "prestige", "range"], trans: "新总裁必须从前任那里接手复杂的法律问题。", expl: "inherit: 继承" },
+        { id: "p16_4", q: "Every year, 1.25 million people die in traffic accidents around the world, which is ______ to the entire population of China's Lijiang City.", a: "equivalent", options: ["revolutionize", "equivalent", "assume", "rig"], trans: "每年全球有125万人死于交通事故，这相当于中国丽江市的总人口。", expl: "equivalent to: 相当于" },
+        { id: "p16_5", q: "What is fundamental to a company's survival is to ______ and always go a few steps ahead in the industry.", a: "innovate", options: ["innovate", "refund", "whereas", "proclaim"], trans: "公司生存的根本在于创新，并始终在行业中保持领先。", expl: "innovate: 创新" },
+        { id: "p16_6", q: "All the member countries at the conference have signed a treaty to ______ their loyalty to the alliance.", a: "proclaim", options: ["proclaim", "correlate", "prestige", "assume"], trans: "会议上所有成员国签署了一项条约，宣示他们对联盟的忠诚。", expl: "proclaim: 宣示，宣告" },
+        // 【补全】Huawei 句子的完整内容
+        { id: "p16_7", q: "Huawei, a Chinese technology company that provides telecommunications equipment and sells consumer electronics, enjoys high ______ both locally and internationally.", a: "prestige", options: ["range", "prestige", "inherit", "revolutionize"], trans: "华为作为一家提供电信设备和销售消费电子产品的中国科技公司，在本地和国际上都享有很高的声望。", expl: "prestige: 声望" },
+        { id: "p16_8", q: "The railway company claimed that they would ______ 20 percent of a fare if their train is more than an hour late.", a: "refund", options: ["refund", "whereas", "equivalent", "correlate"], trans: "铁路公司声称，如果列车晚点超过一小时，他们将退还20%的票款。", expl: "refund: 退款" },
+        { id: "p16_9", q: "Lu Xun produced many long-lasting short stories, the themes of which cover an extensive ______ and reflect a multitude of aspects of social life.", a: "range", options: ["rig", "range", "innovate", "inherit"], trans: "鲁迅创作了许多经久不衰的短篇小说，其题材涵盖广泛，反映了社会生活的方方面面。", expl: "range: 范围" },
+        { id: "p16_10", q: "Agricultural technologies have ______ farm production, resulting in a dramatic increase in grain output.", a: "revolutionized", options: ["revolutionized", "proclaim", "prestige", "assume"], trans: "农业技术彻底改变了农业生产，导致粮食产量急剧增加。", expl: "revolutionize: 使...发生革命性变化" },
+        { id: "p16_11", q: "He was sentenced to ten years' imprisonment for ______ the stock market and making huge profits illegally.", a: "rigging", options: ["rigging", "refund", "range", "whereas"], trans: "他因操纵股票市场和非法牟取暴利被判处十年监禁。", expl: "rig: 操纵（市场）" },
+        { id: "p16_12", q: "The city spent over $1 billion on its museums and stadiums, ______ it failed to look after its schools.", a: "whereas", options: ["whereas", "equivalent", "correlate", "innovate"], trans: "该市在博物馆和体育馆上花费了超过10亿美元，然而却未能照顾好它的学校。", expl: "whereas: 然而" },
+
+        // --- Page 17: Language Enhancement 2 (Expressions) ---
+        { id: "p17_1", q: "If someone tries to persuade you to invest in a project that is least likely to pay off, you might as well ______ it.", a: "close your ears to", options: ["close your ears to", "point out", "fill out", "result in"], trans: "如果有人劝你投资一个最不可能盈利的项目，你最好充耳不闻。", expl: "close ears to: 充耳不闻" },
+        { id: "p17_2", q: "All doctoral students are expected to hand in their thesis abstracts before Friday, so don't ______ details for the time being.", a: "sweat over", options: ["sweat over", "tend to", "in the first place", "behind the times"], trans: "所有博士生都需在周五前提交论文摘要，所以暂时不要为细节焦虑。", expl: "sweat over: 焦虑，辛苦处理" },
+        { id: "p17_3", q: "It will take some time for the applicants to ______ the forms for overseas study programs.", a: "fill out", options: ["fill out", "point out", "close one's ears to", "result in"], trans: "申请人需要一些时间来填写海外留学项目的表格。", expl: "fill out: 填写" },
+        { id: "p17_4", q: "People in rural or underserved urban areas tend to be much ______ when it comes to the latest computing technology.", a: "behind the times", options: ["behind the times", "in the first place", "sweat over", "tend to"], trans: "农村或服务不足的城市地区的人在最新计算机技术方面往往比较落后。", expl: "behind the times: 落后于时代" },
+        { id: "p17_5", q: "He couldn't find the application form; probably he had not even been given one ______.", a: "in the first place", options: ["in the first place", "result in", "fill out", "point out"], trans: "他找不到申请表；也许他一开始就没拿到。", expl: "in the first place: 起初" },
+        { id: "p17_6", q: "The fall in the value of the Japanese yen might ______ a very slight increase in interest rates.", a: "result in", options: ["result in", "tend to", "close one's ears to", "sweat over"], trans: "日元贬值可能会导致利率微幅上升。", expl: "result in: 导致" },
+
+        // --- Page 52: Language Enhancement 1 (Boldfaced Words) ---
+        { id: "p52_1", q: "Officials claim that the chemical leak accident <b>poses</b> no real danger for surrounding residents.", a: "presents", options: ["presents", "alarms", "boosts"], trans: "官员称化学泄漏事故对周围居民不构成真正危险。", expl: "pose danger = present danger" },
+        { id: "p52_2", q: "These arguments were <b>valid</b> a hundred years ago and they still hold true today.", a: "justifiable", options: ["valuable", "flawless", "justifiable"], trans: "这些论点在一百年前是成立的，今天仍然适用。", expl: "valid = justifiable (有道理的)" },
+        { id: "p52_3", q: "There are rules to prohibit emission of poisonous waste, yet some factories <b>disregard</b> them for the sake of costs.", a: "ignore", options: ["innovate", "correlate", "ignore"], trans: "有规定禁止排放有毒废物，但一些工厂为了节约成本而无视这些规定。", expl: "disregard = ignore" },
+        { id: "p52_4", q: "His <b>interpretation</b> of the theory was not accurate or objective.", a: "explanation", options: ["explanation", "revolution", "completion"], trans: "他对该理论的解释既不准确也不客观。", expl: "interpretation = explanation" },
+        { id: "p52_5", q: "It is well <b>documented</b> that women generally have a longer life span than men.", a: "proven with facts", options: ["proven with facts", "imposed with orders", "announced with authority"], trans: "有充分的文件证明，女性通常比男性寿命更长。", expl: "documented = proven with facts" },
+        { id: "p52_6", q: "The attorney's arguments are valid since he has collected enough <b>proof</b> concerning the case.", a: "evidence", options: ["assurance", "promotion", "evidence"], trans: "律师的论点是有效的，因为他收集了关于此案的足够证据。", expl: "proof = evidence" },
+        { id: "p52_7", q: "We hope that our research will have an <b>impact</b> on the environment, especially the air quality in cities.", a: "influence", options: ["initiative", "influence", "analysis"], trans: "我们希望我们的研究能对环境产生影响，特别是城市的空气质量。", expl: "impact = influence" },
+        { id: "p52_8", q: "The system is so sensitive that it can <b>detect</b> changes in temperature as small as 0.003 degrees.", a: "identify", options: ["identify", "inherit", "convert"], trans: "该系统非常灵敏，能检测到小至0.003度的温度变化。", expl: "detect = identify (识别/发现)" },
+        { id: "p52_9", q: "The president said curbing the addiction of alcohol would save money and <b>prolong</b> lives.", a: "extend", options: ["persist", "delay", "extend"], trans: "总统表示，遏制酗酒将节省金钱并延长生命。", expl: "prolong = extend" },
+        { id: "p52_10", q: "We still have no <b>conclusive</b> proof that climate change is caused solely by human activity.", a: "decisive", options: ["decisive", "dominant", "apparent"], trans: "我们仍然没有确凿的证据证明气候变化完全是由人类活动引起的。", expl: "conclusive = decisive (决定性的)" },
+        { id: "p52_11", q: "The research team has been <b>tracking</b> atmospheric temperatures in the region for two decades.", a: "following", options: ["generating", "following", "spinning"], trans: "该研究团队已经追踪该地区的大气温度二十年了。", expl: "tracking = following" },
+        { id: "p52_12", q: "Concentration is <b>defined</b> as the process of centering one's attention over a period of time.", a: "explained", options: ["outlined", "distinguished", "explained"], trans: "专注被定义为在一段时间内集中注意力的过程。", expl: "defined = explained" },
+        { id: "p52_13", q: "There is still no general <b>consensus</b> on whether global warming is real or not.", a: "agreement", options: ["agreement", "conclusion", "definition"], trans: "关于全球变暖是否真实，目前仍无普遍共识。", expl: "consensus = agreement" },
+        { id: "p52_14", q: "Environmentalists <b>advocate</b> that all vehicles keep to exhaust emission standard.", a: "support", options: ["support", "determine", "indicate"], trans: "环保主义者提倡所有车辆都应遵守废气排放标准。", expl: "advocate = support" },
+        { id: "p52_15", q: "It is important to <b>maintain</b> a constant temperature inside the greenhouse.", a: "keep", options: ["keep", "contain", "restrict"], trans: "保持温室内的恒定温度非常重要。", expl: "maintain = keep" },
+
+        // --- Page 53: Language Enhancement 2A (Prepositions) ---
+        { id: "p53_1", q: "This is partially attributed ______ the melting of ice caps.", a: "to", options: ["to", "with", "from", "on"], trans: "这部分归因于冰盖的融化。", expl: "attribute ... to: 归因于" },
+        { id: "p53_2", q: "Sea levels have doubled compared ______ the 20th century trend.", a: "with", options: ["with", "to", "in", "at"], trans: "与20世纪的趋势相比，海平面上升速度翻了一番。", expl: "compared with: 与...相比" },
+        // 【补全】"The rise in sea levels"
+        { id: "p53_3", q: "The rise in sea levels has resulted ______ greenhouse gases.", a: "from", options: ["from", "in", "to", "on"], trans: "海平面上升是由温室气体导致的。", expl: "result from: 起因于" },
+        // 【补全】"The glaciers in the Himalayas"
+        { id: "p53_4", q: "The glaciers in the Himalayas are decreasing in size due ______ reduction in gases.", a: "to", options: ["to", "from", "with", "by"], trans: "喜马拉雅山的冰川正在缩小，归因于气体的减少（注：原文语境）。", expl: "due to: 由于" },
+        // 【补全】"For those in favor"
+        { id: "p53_5", q: "For those in favor ______ proving its existence ...", a: "of", options: ["of", "in", "on", "to"], trans: "对于那些赞成证明其存在的人...", expl: "in favor of: 赞成" },
+        { id: "p53_6", q: "These scientists hold ______ a strict definition ...", a: "to", options: ["to", "on", "with", "at"], trans: "这些科学家坚持严格的定义...", expl: "hold to: 坚持" },
+        { id: "p53_7", q: "But, ______ the contrary Arctic ice is up ...", a: "on", options: ["on", "in", "to", "of"], trans: "但是，相反的是，北极冰层增加了...", expl: "on the contrary: 相反" },
+        { id: "p53_8", q: "The ... problem lies ______ the two groups using different definitions.", a: "in", options: ["in", "on", "at", "to"], trans: "问题在于这两个群体使用了不同的定义。", expl: "lie in: 在于" },
+        { id: "p53_9", q: "... it is more reflective ______ the real issue.", a: "of", options: ["of", "to", "in", "with"], trans: "这更能反映真实问题。", expl: "reflective of: 反映" },
+        { id: "p53_10", q: "Contrary ______ public belief ...", a: "to", options: ["to", "with", "from", "on"], trans: "与公众的看法相反...", expl: "contrary to: 相反" },
+
+        // --- Page 54: Language Enhancement 2B (Collocations) ---
+        { id: "p54_1", q: "Some economists have ______ much of the rising wage inequality ______ the shift in favor of the most skilled workers.", a: "attributed ... to", options: ["attributed ... to", "compared ... with", "due ... to", "result ... in"], trans: "一些经济学家将工资不平等加剧的主要原因归结为向高技能工人的倾斜。", expl: "attribute ... to: 把...归因于" },
+        { id: "p54_2", q: "Statistics showed a 30 percent increase of people in the workforce this year ______ last year.", a: "compared with", options: ["compared with", "contrary to", "due to", "in favor of"], trans: "统计数据显示，今年劳动人口比去年增加了30%。", expl: "compared with: 与...相比" },
+        { id: "p54_3", q: "The case was handed over to independent investigators so that there could be no inference of bias ______ any party.", a: "in favor of", options: ["in favor of", "reflective of", "lies in", "hold to"], trans: "案件已移交独立调查人员，以确保没有偏袒任何一方的嫌疑。", expl: "in favor of: 偏袒/有利于" },
+        { id: "p54_4", q: "One of the attractive features of the course ______ the fact that practice is integrated with theory.", a: "lies in", options: ["lies in", "results in", "contrary to", "compared with"], trans: "该课程的一个吸引人之处在于理论与实践相结合。", expl: "lie in: 在于" },
+        { id: "p54_5", q: "______ the old warning that time waits for no one, time slows down when you are on the move.", a: "Contrary to", options: ["Contrary to", "Due to", "Reflective of", "Hold to"], trans: "与“时不我待”的古老警告相反，当你处于运动状态时，时间似乎慢了下来。", expl: "contrary to: 与...相反" },
+        { id: "p54_6", q: "According to the disaster relief commission, failure to follow this warning can ______ property damage, serious injury, or even death.", a: "result in", options: ["result in", "lie in", "attribute to", "compare with"], trans: "根据救灾委员会的说法，不遵守这一警告可能导致财产损失、重伤甚至死亡。", expl: "result in: 导致" },
+        { id: "p54_7", q: "The living conditions of the poor have been heavily affected ______ the need to spend high shares of their income on food.", a: "due to", options: ["due to", "contrary to", "in favor of", "reflective of"], trans: "穷人的生活条件受到严重影响，归因于他们需要将大部分收入用于购买食物。", expl: "due to: 由于" },
+        { id: "p54_8", q: "The large number of staff assigned to investigate this case is ______ its difficulty and complexity.", a: "reflective of", options: ["reflective of", "in favor of", "lies in", "result in"], trans: "指派调查此案的大量工作人员反映了案件的难度和复杂性。", expl: "reflective of: 反映了" },
+
+        // --- Page 87-89: Polysemous Words (Section 1) ---
+        // Address
+        { id: "p87_1", q: "This book discusses these concerns and useful approaches to **address** them.", a: "deal with a problem", options: ["make a speech", "direct words to someone", "deal with a problem"], trans: "这本书讨论了这些担忧以及解决这些问题的有效方法。", expl: "address: 处理" },
+        { id: "p87_2", q: "You will have to **address** your comments to our Head Office.", a: "direct words to someone", options: ["make a speech", "direct words to someone", "deal with a problem"], trans: "你必须将意见提交给我们的总部。", expl: "address: 致函/传达" },
+        { id: "p87_3", q: "The minister **addressed** a group of senior citizens concerning healthcare reform.", a: "make a speech", options: ["make a speech", "direct words to someone", "deal with a problem"], trans: "部长就医疗改革问题向一群老年人发表了演说。", expl: "address: 演讲" },
+        // Approach
+        { id: "p87_4", q: "Since our research has not produced any solutions to this problem, we need to adopt a different **approach** to it.", a: "a way of considering or doing something", options: ["come near or nearer to (something) in amount", "deal with (something)", "a way of considering or doing something"], trans: "由于我们的研究尚未得出该问题的解决方案，我们需要采取不同的方法。", expl: "approach (n.): 方法/途径" },
+        { id: "p87_5", q: "The total amount raised so far is **approaching** $1,000.", a: "come near or nearer to (something) in amount", options: ["come near or nearer to (something) in amount", "deal with (something)", "a way of considering or doing something"], trans: "到目前为止筹集的总金额接近1000美元。", expl: "approach (v.): 接近（数量/时间）" },
+        { id: "p87_6", q: "It might be possible to **approach** the problem in a different way.", a: "deal with (something)", options: ["come near or nearer to (something) in amount", "deal with (something)", "a way of considering or doing something"], trans: "也许可以用另一种方式来处理这个问题。", expl: "approach (v.): 着手处理" },
+        // Deny
+        { id: "p88_7", q: "No one should be **denied** a good education.", a: "not allow (someone) to have or do something", options: ["say that (something) is not true", "not allow (someone) to have or do something"], trans: "任何人都没理由被剥夺接受良好教育的权利。", expl: "deny: 拒绝给予/剥夺" },
+        { id: "p88_8", q: "The composer **denies** that he copied the tune from an old Beatles song.", a: "say that (something) is not true", options: ["say that (something) is not true", "not allow (someone) to have or do something"], trans: "作曲家否认他抄袭了披头士的一首老歌的曲调。", expl: "deny: 否认" },
+        // Discount
+        { id: "p88_9", q: "You shouldn't **discount** the possibility of losing the match.", a: "consider that (something) is not worth serious attention", options: ["a reduction in the usual price", "consider that (something) is not worth serious attention", "reduce the price of (something)"], trans: "你不应该忽视输掉比赛的可能性。", expl: "discount (v.): 低估/忽视/不重视" },
+        { id: "p88_10", q: "Tour prices in the first quarter are being **discounted** as much as 33%.", a: "reduce the price of (something)", options: ["a reduction in the usual price", "consider that (something) is not worth serious attention", "reduce the price of (something)"], trans: "第一季度的旅游价格最高打折了33%。", expl: "discount (v.): 打折" },
+        { id: "p88_11", q: "There is a 25% **discount** on all household appliances until the end of the week.", a: "a reduction in the usual price", options: ["a reduction in the usual price", "consider that (something) is not worth serious attention", "reduce the price of (something)"], trans: "本周末之前，所有家用电器都有25%的折扣。", expl: "discount (n.): 折扣" },
+        // Extreme
+        { id: "p88_12", q: "Drivers are warned to take **extreme** care on the icy roads.", a: "very large in amount or degree", options: ["very large in amount or degree", "very severe or bad", "considered by most people to be unreasonable and unacceptable"], trans: "司机被警告在结冰的道路上要格外小心。", expl: "extreme: 极度的/极大的" },
+        { id: "p88_13", q: "In **extreme** cases, the disease can lead to blindness.", a: "very severe or bad", options: ["very large in amount or degree", "very severe or bad", "considered by most people to be unreasonable and unacceptable"], trans: "在极端（严重）的情况下，这种疾病可能导致失明。", expl: "extreme: 极严重的" },
+        { id: "p88_14", q: "Their **extreme** views have been opposed by the public.", a: "considered by most people to be unreasonable and unacceptable", options: ["very large in amount or degree", "very severe or bad", "considered by most people to be unreasonable and unacceptable"], trans: "他们的极端观点遭到了公众的反对。", expl: "extreme: 偏激的/极端的" },
+        // Function
+        { id: "p88_15", q: "Studies suggest that regular intake of vitamins significantly improves brain **function**.", a: "the way in which something works or operates", options: ["a formal social event at which a lot of people are usually present", "the way in which something works or operates", "work or operate"], trans: "研究表明，定期摄入维生素能显著改善大脑功能。", expl: "function (n.): 功能/机能" },
+        { id: "p88_16", q: "As a mayor, he has a lot of official **functions** to attend.", a: "a formal social event at which a lot of people are usually present", options: ["a formal social event at which a lot of people are usually present", "the way in which something works or operates", "work or operate"], trans: "作为市长，他有很多公务活动要参加。", expl: "function (n.): 盛大集会/社交聚会" },
+        { id: "p88_17", q: "The authorities say the organization is now **functioning** normally.", a: "work or operate", options: ["a formal social event at which a lot of people are usually present", "the way in which something works or operates", "work or operate"], trans: "当局表示该组织目前运作正常。", expl: "function (v.): 运作/运转" },
+        // Practice
+        { id: "p89_18", q: "It's common **practice** in western culture to tip the hairdresser.", a: "something that is usually or regularly done, often as a habit, tradition, or custom", options: ["action rather than thought or ideas", "something that is usually or regularly done, often as a habit, tradition, or custom", "a job or business that involves a lot of skill or training", "work in an important skilled job for which a lot of training is necessary"], trans: "在西方文化中，给理发师小费是常见的做法。", expl: "practice (n.): 惯例/习俗" },
+        { id: "p89_19", q: "How do you intend to put these proposals into **practice**?", a: "action rather than thought or ideas", options: ["action rather than thought or ideas", "something that is usually or regularly done, often as a habit, tradition, or custom", "a job or business that involves a lot of skill or training", "work in an important skilled job for which a lot of training is necessary"], trans: "你打算如何将这些提议付诸实践？", expl: "practice (n.): 实践/实行" },
+        { id: "p89_20", q: "She has **practiced** medicine for 20 years.", a: "work in an important skilled job for which a lot of training is necessary", options: ["action rather than thought or ideas", "something that is usually or regularly done, often as a habit, tradition, or custom", "a job or business that involves a lot of skill or training", "work in an important skilled job for which a lot of training is necessary"], trans: "她行医已有20年了。", expl: "practice (v.): 从事（专业性工作）" },
+        { id: "p89_21", q: "She's decided to leave the Health Service and join a private **practice**.", a: "a job or business that involves a lot of skill or training", options: ["action rather than thought or ideas", "something that is usually or regularly done, often as a habit, tradition, or custom", "a job or business that involves a lot of skill or training", "work in an important skilled job for which a lot of training is necessary"], trans: "她决定离开卫生服务机构，加入一家私人诊所（业务）。", expl: "practice (n.): 业务/诊所/事务所" },
+
+        // --- Page 89: Language Enhancement 2 (Expressions) ---
+        { id: "p89_1", q: "It is an army man's duty to ______ orders strictly during a military operation.", a: "act on", options: ["act on", "be rid of", "aside from", "brush aside"], trans: "在军事行动中严格执行命令是军人的职责。", expl: "act on: 奉行/执行" },
+        { id: "p89_2", q: "If you have ______ all the exercises in this book, you are ready for the advanced course.", a: "followed through", options: ["followed through", "build up", "cope with", "reach out"], trans: "如果你已经完成了这本书里的所有练习，你就准备好上高级课程了。", expl: "follow through: 坚持到底/完成" },
+        { id: "p89_3", q: "The government programs are intended to ______ poverty throughout the country within ten years.", a: "be rid of", options: ["be rid of", "be aware of", "act on", "struggle with"], trans: "政府项目旨在十年内消除全国范围内的贫困。", expl: "be rid of: 摆脱/消除" },
+        { id: "p89_4", q: "Talk to someone or a professional about your problems. Don't let your depression ______.", a: "build up", options: ["build up", "brush aside", "cope with", "follow through"], trans: "找人或专业人士谈谈你的问题，不要让你的抑郁情绪积聚。", expl: "build up: 积聚/增强" },
+        { id: "p89_5", q: "An alarming number of physicians are unable to ______ the pressure of practicing everyday medicine.", a: "cope with", options: ["cope with", "reach out", "aside from", "be rid of"], trans: "惊人数量的医生无法应对日常行医的压力。", expl: "cope with: 应对/处理" },
+        { id: "p89_6", q: "It would do good if scholars could ______ and exchange ideas with their counterparts at home and abroad.", a: "reach out", options: ["reach out", "act on", "follow through", "build up"], trans: "如果学者们能走出去与国内外的同行交流想法，那将很有益处。", expl: "reach out: 接触/交流" },
+        { id: "p89_7", q: "Money remains to be a problem, but ______ that the plan is progressing nicely.", a: "aside from", options: ["aside from", "be aware of", "struggle with", "brush aside"], trans: "钱仍然是个问题，但除此之外，计划进展顺利。", expl: "aside from: 除了" },
+        { id: "p89_8", q: "The company denied the rumors and ______ reports that it was on the verge of bankruptcy.", a: "brushed aside", options: ["brushed aside", "act on", "reach out", "cope with"], trans: "公司否认了谣言，并对关于其濒临破产的报道置之不理。", expl: "brush aside: 漠视/置之不理" },
+
+        // --- Page 128: Language Enhancement 1 (Word Choice) ---
+        // 【补全】"which started out by handling big data"
+        { id: "p128_1", q: "The company, which started out by handling big data, has now ______ into a high-prestige enterprise that covers many domains of Internet services.", a: "evolved", options: ["evolved", "displace", "bias", "foster"], trans: "这家以处理大数据起家的公司，现已发展成为一家涵盖互联网服务多个领域的声望很高的企业。", expl: "evolve: 进化/发展" },
+        // 【补全】"in the proportion of citizens with college degrees"
+        { id: "p128_2", q: "For decades, the U.S. led the world in the proportion of citizens with college degrees, but in recent years it has been ______ by other countries.", a: "surpassed", options: ["surpassed", "manipulation", "multiply", "strategic"], trans: "几十年来，美国在拥有大学学位的公民比例方面领先世界，但近年来已被其他国家超越。", expl: "surpass: 超过" },
+        { id: "p128_3", q: "After 30 years' living in Guangzhou, Elizabeth has been ______ into the local culture, and now she speaks fluent Cantonese.", a: "assimilated", options: ["assimilated", "automatically", "proof", "minimize"], trans: "在广州生活了30年后，伊丽莎白已被同化入当地文化，现在她能说流利的粤语。", expl: "assimilate: 同化" },
+        { id: "p128_4", q: "The lawyer's arguments are well grounded because he has collected enough ______ concerning the case.", a: "proof", options: ["proof", "domain", "displace", "evolve"], trans: "律师的论点很有依据，因为他收集了关于此案的足够证据。", expl: "proof: 证据" },
+        { id: "p128_5", q: "It is proved that playing sports can ______ the social development of young people, teaching them how to interact with peers outside the classroom.", a: "foster", options: ["foster", "bias", "manipulation", "multiply"], trans: "事实证明，体育运动可以促进年轻人的社会发展，教会他们如何在课堂外与同龄人互动。", expl: "foster: 培养/促进" },
+        // 【补全】"from central enterprises to tech giants"
+        { id: "p128_6", q: "Big-name employers, from central enterprises to tech giants, have a(n) ______ in favor of recruiting graduates from prestigious universities.", a: "bias", options: ["bias", "strategic", "automatically", "minimize"], trans: "从央企到科技巨头的大牌雇主，在招聘名校毕业生方面都存在偏见（偏好）。", expl: "bias: 偏见" },
+        { id: "p128_7", q: "There has been so much media ______ of the facts that nobody knows the truth of the issue.", a: "manipulation", options: ["manipulation", "displace", "assimilate", "domain"], trans: "媒体对事实进行了如此多的操纵，以至于没人知道问题的真相。", expl: "manipulation: 操纵" },
+        { id: "p128_8", q: "The executives believed that combining the two work teams would ______ their strength by several times.", a: "multiply", options: ["multiply", "evolve", "proof", "surpass"], trans: "高管们认为，合并两个工作团队将使他们的力量倍增。", expl: "multiply: 成倍增加" },
+        { id: "p128_9", q: "It is the company's ______ decision to sell part of its business to focus on its core products.", a: "strategic", options: ["strategic", "foster", "bias", "automatically"], trans: "这是公司的战略决策，出售部分业务以专注于核心产品。", expl: "strategic: 战略性的" },
+        { id: "p128_10", q: "If the air pressure in aircraft cabin becomes lower, oxygen masks will ______ drop down.", a: "automatically", options: ["automatically", "manipulation", "minimize", "displace"], trans: "如果机舱内气压降低，氧气面罩会自动脱落。", expl: "automatically: 自动地" },
+        { id: "p128_11", q: "These top-secret documents should never have been released into the public ______.", a: "domain", options: ["domain", "assimilate", "evolve", "multiply"], trans: "这些绝密文件绝不应该被发布到公共领域。", expl: "public domain: 公共领域" },
+        // 【补全】"within their power"
+        { id: "p128_12", q: "Environmentalists are doing everything within their power to ______ the impact of the oil spill.", a: "minimize", options: ["minimize", "surpass", "proof", "strategic"], trans: "环保人士正在尽一切努力将漏油的影响降至最低。", expl: "minimize: 最小化" },
+        { id: "p128_13", q: "Some manual labor is bound to be ______ by artificial intelligence, so workers need retraining for more technical jobs.", a: "displaced", options: ["displaced", "foster", "bias", "manipulation"], trans: "一些体力劳动注定会被人工智能所取代，因此工人需要接受再培训以从事技术性更强的工作。", expl: "displace: 取代" },
+
+        // --- Page 129: Language Enhancement 2 (Expressions) ---
+        // 【补全】"within short years"
+        { id: "p129_1", q: "He built up a successful business within short years but it was all done ______ his health.", a: "at the expense of", options: ["at the expense of", "be bound to", "queue up", "take in"], trans: "他在短短几年内建立了成功的企业，但这都是以牺牲他的健康为代价的。", expl: "at the expense of: 以...为代价" },
+        // 【补全】"by more than 50 percent since the start of this year"
+        { id: "p129_2", q: "The company's stock has declined by more than 50 percent since the start of this year, ______ last year when it gained 30 percent.", a: "in contrast with", options: ["in contrast with", "a metaphor for", "commit", "be well placed to"], trans: "公司股票自今年年初以来已下跌超过50%，这与去年上涨30%形成了对比。", expl: "in contrast with: 与...形成对比" },
+        { id: "p129_3", q: "When you have to cope with so many issues at the same time, mistakes ______ happen.", a: "are bound to", options: ["are bound to", "at the expense of", "in terms of", "queue up"], trans: "当你必须同时处理这么多问题时，错误是注定会发生的。", expl: "be bound to: 注定" },
+        // 【补全】"in a sense"
+        { id: "p129_4", q: "The increasing number of solitary persons, in a sense, is ______ the lack of communication in the modern world.", a: "a metaphor for", options: ["a metaphor for", "in contrast with", "take in", "be well placed to"], trans: "独居人数的增加，在某种意义上，是现代世界缺乏沟通的一个隐喻。", expl: "metaphor: 隐喻" },
+        // 【补全】"busy reviewing the words in the dictionary and"
+        { id: "p129_5", q: "In preparation for the scrabble competition, students are busy reviewing the words in the dictionary and trying to ______ the words to memory.", a: "commit", options: ["commit", "queue up", "be bound to", "at the expense of"], trans: "为了准备拼字比赛，学生们正忙着复习字典里的单词，并试图把单词记住。", expl: "commit to memory: 记住" },
+        { id: "p129_6", q: "The doctor explained possible treatments but Leslie, still bothered by her unfinished work, was not ______ anything.", a: "taking in", options: ["taking in", "a metaphor for", "in contrast with", "in terms of"], trans: "医生解释了可能的治疗方法，但莱斯利仍然被她未完成的工作所困扰，什么也听不进去。", expl: "take in: 理解/吸收" },
+        { id: "p129_7", q: "For the sake of security, visitors will have to ______ to pass through metal detectors before entering the museum.", a: "queue up", options: ["queue up", "be well placed to", "commit", "take in"], trans: "为了安全起见，游客在进入博物馆前必须排队通过金属探测器。", expl: "queue up: 排队" },
+        { id: "p129_8", q: "The executives believe that the Group ______ manage its business despite the current highly uncertain economic environment.", a: "is well placed to", options: ["is well placed to", "be bound to", "a metaphor for", "in contrast with"], trans: "高管们认为，尽管目前经济环境高度不确定，该集团仍处于有利地位来管理其业务。", expl: "be well placed to: 处境优越/处于有利地位" },
+
+        // --- Page 169: Language Enhancement 1 (Word Choice) ---
+        { id: "p169_1", q: "Farming technology enables the crops to be ______ by liquid fertilizer, which is more effective and sustainable than the conventional method.", a: "nourished", options: ["nourished", "biased", "regime", "preach"], trans: "农业技术使作物能够得到液体肥料的滋养，这比传统方法更有效且可持续。", expl: "nourish: 滋养" },
+        { id: "p169_2", q: "Although she once ______ freedom and independence, she now gives up her career and becomes a devoted housewife.", a: "preached", options: ["preached", "processed", "variable", "duration"], trans: "虽然她曾经宣扬自由和独立，但她现在放弃了事业，成为了一名尽职的家庭主妇。", expl: "preach: 宣扬/布道" },
+        // 【补全】"the general statement"
+        { id: "p169_3", q: "The common nutrition advice usually includes the general statement 'eat less ______ food and choose fresh food instead.'", a: "processed", options: ["processed", "prevail", "mirror", "definite"], trans: "常见的营养建议通常包括一条一般性声明：“少吃加工食品，选择新鲜食品”。", expl: "processed food: 加工食品" },
+        { id: "p169_4", q: "These workshops, usually of a couple of days' ______, bring scholars and administers together to address some problems.", a: "duration", options: ["duration", "biased", "nourished", "regime"], trans: "这些通常持续几天的研讨会将学者和管理者聚集在一起解决一些问题。", expl: "duration: 持续时间" },
+        { id: "p169_5", q: "His account of the situation was very ______ and you should check facts before making a judgment.", a: "biased", options: ["biased", "preach", "variable", "prevail"], trans: "他对情况的描述非常有偏见，你在下判断之前应该核实事实。", expl: "biased: 有偏见的" },
+        { id: "p169_6", q: "Despite low interest rates, the concept of depositing money in the bank still ______ among the vast majority of people.", a: "prevails", options: ["prevails", "processed", "mirror", "definite"], trans: "尽管利率很低，把钱存入银行的观念在绝大多数人中仍然盛行。", expl: "prevail: 盛行" },
+        // 【补全】"drastically"
+        { id: "p169_7", q: "The sales of healthcare products have been increasing drastically, which ______ the public's pursuit of health and longevity.", a: "mirrors", options: ["mirrors", "duration", "nourished", "preach"], trans: "保健品的销售额一直在急剧增加，这反映了公众对健康和长寿的追求。", expl: "mirror: 反映" },
+        { id: "p169_8", q: "Some people are anxious to try various health ______, but never stick to any of them.", a: "regimes", options: ["regimes", "biased", "processed", "variable"], trans: "有些人急于尝试各种养生法，但从不坚持。", expl: "regime: 疗法/制度/政权" },
+        { id: "p169_9", q: "We have some statistics, but we really need something more ______ before we can make any firm decisions.", a: "definite", options: ["definite", "prevail", "mirror", "duration"], trans: "我们有一些统计数据，但在做出任何确定的决定之前，我们确实需要更确切的东西。", expl: "definite: 确定的" },
+        { id: "p169_10", q: "A study of hundreds of elderly people shows that some have similar lifestyles, but ______ in health conditions.", a: "variable", options: ["variable", "nourished", "regime", "preach"], trans: "一项针对数百名老年人的研究表明，有些人的生活方式相似，但健康状况多变（不尽相同）。", expl: "variable: 多变的" },
+
+        // --- Page 170: Language Enhancement 2 (Expressions) ---
+        { id: "p170_1", q: "The doctor cautions that this drug may have the effect of ______ the patients' heart rate.", a: "speeding up", options: ["speeding up", "on average", "make up", "that said"], trans: "医生警告说，这种药可能有加速患者心率的作用。", expl: "speed up: 加速" },
+        { id: "p170_2", q: "Studies show that ______ people who consciously control their diet are healthier than those overeating.", a: "on average", options: ["on average", "take a leaf from sb.'s book", "one size fits all", "as well as"], trans: "研究表明，平均而言，有意识控制饮食的人比暴饮暴食的人更健康。", expl: "on average: 平均而言" },
+        { id: "p170_3", q: "As a result, the method of ______ means convenience for policy makers, but not practical to the local governments with their specific needs and situations.", a: "one size fits all", options: ["one size fits all", "speed up", "make up", "on average"], trans: "结果，一刀切的方法对决策者来说意味着方便，但对于有特定需求和情况的地方政府来说并不实用。", expl: "one size fits all: 一刀切" },
+        { id: "p170_4", q: "He is studying like crazy to ______ the lessons he missed during his stay in the hospital.", a: "make up", options: ["make up", "that said", "as well as", "take a leaf from sb.'s book"], trans: "他正在疯狂地学习，以补上住院期间落下的功课。", expl: "make up: 补上" },
+        { id: "p170_5", q: "When you are in a leadership position, many people will ______, whether intentionally or not.", a: "take a leaf from your book", options: ["take a leaf from your book", "speed up", "one size fits all", "make up"], trans: "当你处于领导地位时，许多人会有意无意地效仿你。", expl: "take a leaf from one's book: 效仿某人" },
+
+        // --- Page 243: Language Enhancement 1 (Boldfaced Meaning) ---
+        { id: "p243_1", q: "The meeting is open to everyone, whatever their religious <b>orientation</b>.", a: "This overseas company employs people without regard to their political orientation.", options: ["The department has arranged an orientation session for the new comers.", "This overseas company employs people without regard to their political orientation.", "The company needs to develop a stronger orientation towards marketing its products."], trans: "会议对所有人开放，无论宗教信仰如何。", expl: "orientation: 信仰/取向/方向" },
+        { id: "p243_2", q: "The <b>likes</b>, comments and posts we share on social media connect us to the world.", a: "My new profile picture got more than 100 likes on WeChat Moments.", options: ["Boxing hasn't seen the likes of Muhammad Ali since he retired.", "There's a big sports hall for tennis and badminton and such like.", "My new profile picture got more than 100 likes on WeChat Moments."], trans: "我们在社媒上的点赞连接世界。", expl: "like: 点赞 (n.)" },
+        { id: "p243_3", q: "The drive to land a man on the Moon <b>captured</b> the attention of the whole world.", a: "His stories of foreign adventure captured my imagination.", options: ["Two of the soldiers were killed in the battle and the rest were captured.", "His stories of foreign adventure captured my imagination.", "A passer-by captured the whole incident on his mobile phone."], trans: "登月行动吸引了全世界的注意。", expl: "capture attention/imagination: 吸引（注意力/想象力）。" },
+        { id: "p243_4", q: "Dylan's latest record is a <b>conscious</b> attempt to break away from his old image.", a: "Julia made a conscious effort to appear unconcerned, even though she was very upset.", options: ["Julia made a conscious effort to appear unconcerned, even though she was very upset.", "She was very conscious of being the only one in the office who didn't have a college degree.", "She was fully conscious throughout the surgery and knew what was going on."], trans: "新唱片是他有意改变形象的尝试。", expl: "conscious: 有意的/刻意的" },
+        { id: "p243_5", q: "She frequently <b>exploits</b> her authority by getting other people to do things for her.", a: "She said the tragedy had been exploited by the media, which deepened their hurt.", options: ["The country's natural resources have not yet been fully exploited.", "She said the tragedy had been exploited by the media, which deepened their hurt.", "Many employers are only too ready to exploit and underpay female workers."], trans: "她经常滥用职权让别人为她做事。", expl: "exploit authority: 滥用（抽象）。B项利用悲剧（抽象），最接近。C项剥削人。" },
+        { id: "p243_6", q: "After he was voted out of office, few people attached much <b>weight</b> to what he said.", a: "Her experience does give her opinions quite a bit of weight.", options: ["Her experience does give her opinions quite a bit of weight.", "The weight of the cathedral roof is carried by two rows of pillars.", "There was a slight decrease in his weight after a week of dieting."], trans: "落选后没人重视他的话。", expl: "weight: 分量/重视/影响力" },
+        { id: "p243_7", q: "The newspapers had unjustly <b>labelled</b> him a troublemaker.", a: "Children who are labelled \"slow\" usually get less attention from teachers.", options: ["He labels his photographs with the date and place they were taken.", "Children who are labelled \"slow\" usually get less attention from teachers.", "Be sure to carefully label the switches so that you don't confuse them."], trans: "报纸给他贴上麻烦制造者的标签。", expl: "label: 贴标签/归类 (含贬义)" },
+        { id: "p243_8", q: "It is important to see all the fighting and bloodshed in his plays in historical <b>context</b>.", a: "These incidents are best understood in the context of developments in rural society.", options: ["English words can have several meanings depending on context.", "The reporter took my remarks completely out of context.", "These incidents are best understood in the context of developments in rural society."], trans: "要在历史背景下看待剧中的冲突。", expl: "context: 背景/环境 (抽象)" },
+        { id: "p243_9", q: "The proposals were unpopular and were only accepted in a <b>modified</b> form.", a: "We can modify the design to make it suitable for commercial production.", options: ["We can modify the design to make it suitable for commercial production.", "In the sentence \"She ran quickly\" the adverb \"quickly\" modifies the verb \"ran.\"", "In a compound sentence, an attributive clause is used to modify a noun or pronoun."], trans: "提案修改后才被接受。", expl: "modify: 修改/调整 (使其更好)" },
+
+        // --- Page 289: Language Enhancement 1 (Word Choice) ---
+        { id: "p289_1", q: "Some soldiers are still ______ by war memories and by images of violence, though they have been discharged from the army for many years.", a: "haunted", options: ["haunted", "impose", "suspension", "repression"], trans: "一些士兵尽管退伍多年，仍然被战争的记忆和暴力的画面所困扰（萦绕）。", expl: "haunt: 萦绕/困扰" },
+        { id: "p289_2", q: "The team could barely ______ their disappointment when the result of the robot contest was announced.", a: "conceal", options: ["conceal", "suspension", "reflection", "impose"], trans: "当机器人比赛结果公布时，团队几乎无法掩饰他们的失望。", expl: "conceal: 掩饰" },
+        // 【补全】"for corrupt practices"
+        { id: "p289_3", q: "While his company was under investigation for corrupt practices, some partners ______ to deny any involvement with his business.", a: "hastened", options: ["hastened", "haunt", "reflection", "repression"], trans: "当他的公司因腐败行为接受调查时，一些合作伙伴急忙否认与他的业务有任何牵连。", expl: "hasten: 急忙" },
+        { id: "p289_4", q: "There have been calls for the drug's immediate ______, following reports that it has dangerous side effects.", a: "suspension", options: ["strive", "repression", "persistence", "suspension"], trans: "在有报道称该药物具有危险副作用后，人们呼吁立即暂停使用该药物。", expl: "suspension: 暂停" },
+        { id: "p289_5", q: "The manager originally had discounted the initiative, but after much ______ he agreed to see how it would fare.", a: "reflection", options: ["procession", "repression", "reflection", "hasten"], trans: "经理起初不重视这个提议，但经过深思熟虑后，他同意看看它的进展如何。", expl: "reflection: 深思" },
+        { id: "p289_6", q: "Multiple experiments have demonstrated that the ______ of anger can be detrimental to both physical and mental health.", a: "repression", options: ["repression", "hasten", "strive", "conceal"], trans: "多项实验表明，压抑愤怒对身心健康都有害。", expl: "repression: 压抑" },
+        { id: "p289_7", q: "Generations of Chinese astronomers have been working hard, ______ for a greater understanding of the processes that occur inside stars.", a: "striving", options: ["reflection", "striving", "suspension", "persistence"], trans: "几代中国天文学家一直在努力奋斗，争取更好地理解恒星内部发生的过程。", expl: "strive: 奋斗" },
+        { id: "p289_8", q: "After a(n) ______ of product quality accidents, the food company now has very low prestige among consumers.", a: "procession", options: ["procession", "repression", "suspension", "persistence"], trans: "在一连串产品质量事故之后，这家食品公司现在在消费者中的声望很低。", expl: "procession: 一连串" },
+        { id: "p289_9", q: "He said his achievements were partially attributed to his quiet ______, especially in hard times.", a: "persistence", options: ["persistence", "haunt", "impose", "conceal"], trans: "他说他的成就部分归功于他默默的坚持，特别是在困难时期。", expl: "persistence: 坚持" },
+        { id: "p289_10", q: "Parents are usually inclined to ______ their own moral values on their children, which might bring on rebellion from teenagers.", a: "impose", options: ["strive", "reflection", "impose", "conceal"], trans: "父母通常倾向于将自己的道德价值观强加给孩子，这可能会引起青少年的反叛。", expl: "impose on: 强加" },
+
+        // --- Page 289: Language Enhancement 2 (Expressions) ---
+        { id: "p289_e1", q: "After being informed of winning the lottery, his imagination was ______, thinking of all the ways he could spend the money.", a: "running riot", options: ["running riot", "count for", "beat back", "drink in"], trans: "被告知中彩票后，他的想象力奔放起来，想着所有花钱的方式。", expl: "run riot: 奔放" },
+        { id: "p289_e2", q: "At first, she had concerns about telling the truth, but ______, she opened up and disclosed the secret she had kept for years.", a: "at length", options: ["at length", "under one's breath", "spend itself", "run riot"], trans: "起初，她对说出真相有顾虑，但最终，她敞开心扉，透露了她保守多年的秘密。", expl: "at length: 终于" },
+        { id: "p289_e3", q: "The former president was reluctant to admit the fact that his influence had ______ less ever since he resigned from the leadership.", a: "counted for", options: ["counted for", "drink in", "beat back", "under one's breath"], trans: "这位前总统不愿承认，自从辞去领导职务以来，他的影响力已经变得不那么重要了。", expl: "count for: 有价值/有重要性" },
+        { id: "p289_e4", q: "Hearing the good news, he muttered ______ 'Thank God!' and felt greatly relieved.", a: "under his breath", options: ["under his breath", "run riot", "at length", "count for"], trans: "听到这个好消息，他低声嘀咕了一句“谢天谢地！”，感到如释重负。", expl: "under one's breath: 低声地" },
+        { id: "p289_e5", q: "After days of boring finger practice, the little boy's initial surge of interest in playing the piano ______ at length.", a: "spent itself", options: ["spent itself", "beat back", "drink in", "run riot"], trans: "经过几天枯燥的手指练习，小男孩最初对弹钢琴的兴趣最终耗尽了。", expl: "spend itself: 耗尽" },
+        { id: "p289_e6", q: "The hot dry weather with strong wind prevented firemen from ______ the wildfire within short time.", a: "beating back", options: ["beating back", "count for", "spend itself", "at length"], trans: "炎热干燥的天气加上强风，阻止了消防员在短时间内击退野火。", expl: "beat back: 击退" },
+        { id: "p289_e7", q: "For a moment she just sat there, enjoying the beautiful scene and ______ the fond memories of childhood.", a: "drinking in", options: ["drinking in", "under one's breath", "run riot", "spend itself"], trans: "她坐在那里呆了一会儿，欣赏着美景，陶醉在美好的童年回忆中。", expl: "drink in: 陶醉于/吸收" }
+    ];
+
+    // ================= 核心逻辑 =================
+    const KEY_STATS = 'eng_v14_stats';
+    let stats = { big: {}, gold: {}, quiz: {} };
+
+    window.onload = function() {
+        try {
+            const saved = localStorage.getItem(KEY_STATS);
+            if (saved) stats = JSON.parse(saved);
+            else resetData(); 
+
+            // 直接启动应用，无需等待 CDN
+            document.getElementById('app-content').style.display = 'block';
+            
+            renderBigTrans();
+            renderGoldTrans();
+            renderQuiz();
+            renderMistakes();
+        } catch (e) {
+            console.error("Data error", e);
+            resetData();
+            document.getElementById('app-content').style.display = 'block';
+        }
+    };
+
+    function resetData() {
+        stats = { big: {}, gold: {}, quiz: {} };
+        // 初始化： { mp: 10, c: 0, w: 0 }
+        bigTransDB.forEach(i => stats.big[i.id] = { mp: 10, c: 0, w: 0 });
+        goldTransDB.forEach(i => stats.gold[i.id] = { mp: 10, c: 0, w: 0 });
+        quizDB.forEach(i => stats.quiz[i.id] = { mp: 10, c: 0, w: 0 });
+        saveStats();
+    }
+
+    function saveStats() {
+        localStorage.setItem(KEY_STATS, JSON.stringify(stats));
+        renderMistakes();
+    }
+
+    function switchTab(id, btn) {
+        document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
+    // --- 渲染逻辑 ---
+    function renderBigTrans() {
+        const listDiv = document.getElementById('bigTrans-list');
+        listDiv.innerHTML = '';
+        let list = bigTransDB.map(i => {
+            const s = stats.big[i.id] || {mp:10, c:0, w:0};
+            return {...i, mp: s.mp, c: s.c, w: s.w, sort: s.mp + Math.random()*5};
+        });
+        list.sort((a,b) => b.sort - a.sort);
+        
+        list.slice(0, 5).forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'trans-card anim-item';
+            div.style.animationDelay = `${idx * 0.05}s`;
+            div.innerHTML = `
+                <div class="stat-badge">
+                    <span class="tag-mp">点数:${Math.floor(item.mp)}</span>
+                    <span class="tag-ok">✅${item.c}</span>
+                    <span class="tag-no">❌${item.w}</span>
+                </div>
+                <div class="cn-text">${item.cn}</div>
+                <button class="btn btn-reveal" onclick="this.nextElementSibling.style.display='block';this.style.display='none'">👀 查看英文</button>
+                <div class="en-box">
+                    <div class="en-text">${item.en}</div>
+                    <div style="margin-top:15px; display:flex; justify-content:flex-end; gap:10px;">
+                        <button class="btn btn-no" onclick="updateStat('big', '${item.id}', false)">❌ 不会</button>
+                        <button class="btn btn-yes" onclick="updateStat('big', '${item.id}', true)">✅ 会了</button>
+                    </div>
+                </div>
+            `;
+            listDiv.appendChild(div);
+        });
+    }
+
+    function renderGoldTrans() {
+        const listDiv = document.getElementById('goldTrans-list');
+        listDiv.innerHTML = '';
+        let list = goldTransDB.map(i => {
+            const s = stats.gold[i.id] || {mp:10, c:0, w:0};
+            return {...i, mp: s.mp, c: s.c, w: s.w, sort: s.mp + Math.random()*5};
+        });
+        list.sort((a,b) => b.sort - a.sort);
+        
+        list.slice(0, 15).forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'flashcard-container anim-item';
+            div.style.animationDelay = `${idx * 0.03}s`;
+            div.innerHTML = `
+                <div class="flashcard-inner">
+                    <div class="flash-front"><div>${item.cn}</div><div style="font-size:12px;color:#aaa;">(点击翻转)</div></div>
+                    <div class="flash-back">
+                        <div class="flash-stats">
+                            <span>💡${Math.floor(item.mp)}</span><span>✅${item.c}</span><span>❌${item.w}</span>
+                        </div>
+                        <div class="flash-en-text">${item.en}</div>
+                        <div class="flash-btns">
+                            <button class="btn btn-no" onclick="event.stopPropagation();updateStat('gold','${item.id}',false)">❌</button>
+                            <button class="btn btn-yes" onclick="event.stopPropagation();updateStat('gold','${item.id}',true)">✅</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            div.onclick = function() { this.classList.toggle('flipped'); };
+            listDiv.appendChild(div);
+        });
+    }
+
+    function renderQuiz() {
+        const listDiv = document.getElementById('quiz-list');
+        listDiv.innerHTML = '';
+        let list = quizDB.map(i => {
+            const s = stats.quiz[i.id] || {mp:10, c:0, w:0};
+            return {...i, mp: s.mp, c: s.c, w: s.w, sort: s.mp + Math.random()*5};
+        });
+        list.sort((a,b) => b.sort - a.sort);
+        
+        list.slice(0, 10).forEach((item, idx) => {
+            let opts = [...item.options].sort(() => 0.5 - Math.random());
+            let optsHtml = opts.map(o => `<div class="opt-btn" onclick="checkQuiz(this,'${item.id}','${o.replace(/'/g,"\\'")}', '${item.a.replace(/'/g,"\\'")}', 'fb-${idx}')">${o}</div>`).join('');
+            
+            const div = document.createElement('div');
+            div.className = 'quiz-card anim-item';
+            div.style.animationDelay = `${idx * 0.05}s`;
+            div.innerHTML = `
+                <div class="stat-badge">
+                    <span class="tag-mp">点数:${Math.floor(item.mp)}</span>
+                    <span class="tag-ok">✅${item.c}</span>
+                    <span class="tag-no">❌${item.w}</span>
+                </div>
+                <div class="q-text">${idx+1}. ${item.q}</div>
+                <div class="opt-grid">${optsHtml}</div>
+                <div id="fb-${idx}" class="quiz-feedback">
+                    <strong>解析：</strong>${item.expl}<br>
+                    <strong>答案：</strong>${item.a}
+                    <div class="quiz-trans">翻译：${item.trans}</div>
+                </div>
+            `;
+            listDiv.appendChild(div);
+        });
+    }
+
+    // --- 交互逻辑 ---
+    function checkQuiz(el, id, uVal, cVal, fbId) {
+        if(el.parentElement.classList.contains('done')) return;
+        el.parentElement.classList.add('done');
+        document.getElementById(fbId).style.display = 'block';
+        
+        const isCorrect = (uVal === cVal);
+        
+        if (isCorrect) {
+            el.classList.add('correct');
+            updateStat('quiz', id, true, false); 
+        } else {
+            el.classList.add('wrong');
+            updateStat('quiz', id, false, false);
+            Array.from(el.parentElement.children).forEach(c => {
+                if(c.innerText.trim() === cVal) c.classList.add('correct');
+            });
+        }
+    }
+
+    function updateStat(type, id, isCorrect, showMsg=true) {
+        if(!stats[type][id]) stats[type][id] = {mp:10, c:0, w:0};
+        
+        if(isCorrect) {
+            stats[type][id].c++;
+            stats[type][id].mp = Math.max(0, stats[type][id].mp - 2);
+            if(showMsg) showToast("正确！记忆点数 -2", "success");
+        } else {
+            stats[type][id].w++;
+            stats[type][id].mp += 5;
+            if(showMsg) showToast("需复习！记忆点数 +5", "error");
+        }
+        saveStats();
+    }
+
+    function showToast(msg, type) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = type === 'success' ? `✅ ${msg}` : `🧠 ${msg}`;
+        container.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2000);
+    }
+
+    // --- 错题本功能增强版 (支持点击展开) ---
+    function renderMistakes() {
+        const div = document.getElementById('mistake-list');
+        // 筛选逻辑：记忆点数 > 12 或 错误次数 > 0
+        let h1 = bigTransDB.filter(i => (stats.big[i.id]?.mp > 12 || stats.big[i.id]?.w > 0));
+        let h2 = goldTransDB.filter(i => (stats.gold[i.id]?.mp > 12 || stats.gold[i.id]?.w > 0));
+        let h3 = quizDB.filter(i => (stats.quiz[i.id]?.mp > 12 || stats.quiz[i.id]?.w > 0));
+        
+        if(h1.length + h2.length + h3.length === 0) {
+            div.innerHTML = '<div style="text-align:center; padding:30px; color:#aaa;">暂无高频错题</div>';
+            return;
+        }
+        
+        let html = '';
+
+        // 长难句渲染
+        h1.forEach(i => {
+            html += `
+            <div class="mistake-item" onclick="this.classList.toggle('open')">
+                <div class="mistake-summary">
+                    <div><span class="tag-type tag-blue">长难句</span> ${i.cn}</div>
+                    <div style="font-weight:bold;color:#e74c3c;min-width:40px;text-align:right;">${Math.floor(stats.big[i.id].mp)}</div>
+                </div>
+                <div class="mistake-detail">
+                    <strong>English:</strong> ${i.en}
+                </div>
+            </div>`;
+        });
+
+        // 金句渲染
+        h2.forEach(i => {
+            html += `
+            <div class="mistake-item" onclick="this.classList.toggle('open')">
+                <div class="mistake-summary">
+                    <div><span class="tag-type tag-gold">金句</span> ${i.cn}</div>
+                    <div style="font-weight:bold;color:#e74c3c;min-width:40px;text-align:right;">${Math.floor(stats.gold[i.id].mp)}</div>
+                </div>
+                <div class="mistake-detail">
+                    <strong>Translation:</strong> ${i.en}
+                </div>
+            </div>`;
+        });
+
+        // 选择题渲染
+        h3.forEach(i => {
+            html += `
+            <div class="mistake-item" onclick="this.classList.toggle('open')">
+                <div class="mistake-summary">
+                    <div><span class="tag-type tag-green">选择题</span> ${i.q.substring(0,40)}...</div>
+                    <div style="font-weight:bold;color:#e74c3c;min-width:40px;text-align:right;">错${stats.quiz[i.id].w}</div>
+                </div>
+                <div class="mistake-detail">
+                    <div style="margin-bottom:8px;"><strong>题目：</strong> ${i.q}</div>
+                    <div style="margin-bottom:8px;"><strong>正确答案：</strong> ${i.a}</div>
+                    <div style="margin-bottom:8px;"><strong>解析：</strong> ${i.expl}</div>
+                    <div style="color:#888;">翻译：${i.trans}</div>
+                </div>
+            </div>`;
+        });
+
+        div.innerHTML = html;
+    }
+
+    // --- 打印导出功能 (解决 PDF 乱码和加载问题) ---
+    function printMistakes() {
+        const printDiv = document.getElementById('print-content');
+        const printDate = document.getElementById('print-date');
+        
+        // 准备打印数据
+        let h1 = bigTransDB.filter(i => (stats.big[i.id]?.mp > 12 || stats.big[i.id]?.w > 0));
+        let h2 = goldTransDB.filter(i => (stats.gold[i.id]?.mp > 12 || stats.gold[i.id]?.w > 0));
+        let h3 = quizDB.filter(i => (stats.quiz[i.id]?.mp > 12 || stats.quiz[i.id]?.w > 0));
+
+        if(h1.length + h2.length + h3.length === 0) {
+            alert("没有需要导出的错题！");
+            return;
+        }
+
+        let html = '';
+        if(h1.length > 0) {
+            html += '<h3>一、长难句强化</h3>';
+            h1.forEach((i, idx) => {
+                html += `<div class="print-item"><div class="print-title">${idx+1}. ${i.cn}</div><div class="print-detail">${i.en}</div></div>`;
+            });
+        }
+
+        if(h2.length > 0) {
+            html += '<h3>二、金句速记</h3>';
+            h2.forEach((i, idx) => {
+                html += `<div class="print-item"><div class="print-title">${idx+1}. ${i.cn}</div><div class="print-detail">${i.en}</div></div>`;
+            });
+        }
+
+        if(h3.length > 0) {
+            html += '<h3>三、语法精练</h3>';
+            h3.forEach((i, idx) => {
+                html += `<div class="print-item">
+                    <div class="print-title">${idx+1}. ${i.q}</div>
+                    <div class="print-detail">
+                        <b>答案：</b>${i.a}<br>
+                        <b>解析：</b>${i.expl}
+                    </div>
+                </div>`;
+            });
+        }
+
+        printDiv.innerHTML = html;
+        printDate.innerText = new Date().toLocaleString();
+
+        // 调用浏览器打印（用户可选择另存为 PDF）
+        window.print();
+    }
+
+    function hardReset() {
+        if(confirm("确定清空所有数据？")) { localStorage.removeItem(KEY_STATS); location.reload(); }
+    }
+</script>
+</body>
+</html>
